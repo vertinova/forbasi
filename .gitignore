@@ -1,0 +1,30 @@
+# Node
+node_modules/
+
+# Env files
+.env
+.env.local
+.env.*.local
+
+# Build outputs
+frontend/dist/
+frontend/dist-ssr/
+
+# Uploads (user-generated files)
+backend/uploads/
+
+# Logs
+*.log
+npm-debug.log*
+
+# Prisma generated
+backend/src/generated/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/*
+!.vscode/extensions.json
+.idea

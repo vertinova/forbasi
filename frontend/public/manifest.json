@@ -1,0 +1,23 @@
+{
+  "name": "FORBASI - Federasi Olahraga Baris Berbaris Seluruh Indonesia",
+  "short_name": "FORBASI",
+  "description": "Aplikasi Keanggotaan dan Manajemen KTA FORBASI",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#1d3557",
+  "theme_color": "#0d9500",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/logo-forbasi.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/logo-forbasi.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
