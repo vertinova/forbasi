@@ -6,23 +6,18 @@ export default function ConfirmModal({
   if (!show) return null;
 
   return (
-    <div className="modal-overlay" onClick={onCancel}>
-      <div className="modal" style={{ maxWidth: 440, textAlign: 'center' }} onClick={e => e.stopPropagation()}>
-        <div className="modal-body" style={{ padding: '2rem' }}>
-          <div style={{
-            width: 64, height: 64, borderRadius: '50%',
-            background: danger ? '#fff5f5' : '#fffbeb',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            margin: '0 auto 1rem', fontSize: '2rem',
-            color: danger ? '#dc3545' : '#d97706'
-          }}>
-            ⚠
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={onCancel}>
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+      <div className="relative bg-[#141620] border border-white/[0.06] rounded-2xl shadow-2xl w-full max-w-[440px] text-center overflow-hidden" onClick={e => e.stopPropagation()}>
+        <div className="p-8">
+          <div className={`w-16 h-16 rounded-full ${danger ? 'bg-red-500/10' : 'bg-amber-500/10'} flex items-center justify-center mx-auto mb-4 text-3xl ${danger ? 'text-red-400' : 'text-amber-400'}`}>
+            <i className={`fas ${danger ? 'fa-exclamation-triangle' : 'fa-exclamation-circle'}`} />
           </div>
-          <h3 style={{ marginBottom: '0.5rem', color: '#1d3557' }}>{title}</h3>
-          <p style={{ color: '#666', marginBottom: showReason ? '1rem' : '1.5rem' }}>{message}</p>
+          <h3 className="text-base font-bold text-white mb-2">{title}</h3>
+          <p className={`text-sm text-gray-400 ${showReason ? 'mb-4' : 'mb-6'}`}>{message}</p>
           {showReason && (
-            <div style={{ marginBottom: '1.5rem', textAlign: 'left' }}>
-              <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: '#374151', marginBottom: '0.35rem' }}>
+            <div className="mb-6 text-left">
+              <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1.5">
                 {reasonLabel}
               </label>
               <textarea
@@ -30,19 +25,23 @@ export default function ConfirmModal({
                 onChange={e => onReasonChange && onReasonChange(e.target.value)}
                 rows={3}
                 placeholder="Masukkan catatan atau alasan..."
-                style={{
-                  width: '100%', padding: '0.6rem 0.75rem',
-                  border: '1px solid #d1d5db', borderRadius: 8,
-                  fontSize: '0.875rem', resize: 'vertical',
-                  outline: 'none', fontFamily: 'Poppins, sans-serif',
-                  boxSizing: 'border-box'
-                }}
+                className="w-full px-3.5 py-2.5 text-sm bg-white/[0.05] border border-white/[0.08] text-gray-200 placeholder-gray-500 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500/50 transition-all resize-vertical"
               />
             </div>
           )}
-          <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center' }}>
-            <button className="btn btn-secondary" onClick={onCancel}>Batal</button>
-            <button className={`btn ${danger ? 'btn-danger' : 'btn-primary'}`} onClick={onConfirm}>{confirmText}</button>
+          <div className="flex gap-3 justify-center">
+            <button onClick={onCancel}
+              className="px-5 py-2.5 text-sm rounded-xl bg-white/[0.05] border border-white/[0.08] text-gray-400 font-medium hover:bg-white/[0.08] hover:text-white active:scale-[0.97] transition-all">
+              Batal
+            </button>
+            <button onClick={onConfirm}
+              className={`px-5 py-2.5 text-sm rounded-xl text-white font-semibold shadow-md active:scale-[0.97] transition-all ${
+                danger
+                  ? 'bg-gradient-to-br from-red-500 to-red-600 shadow-red-500/25 hover:from-red-400 hover:to-red-500'
+                  : 'bg-gradient-to-br from-emerald-500 to-emerald-600 shadow-emerald-500/25 hover:from-emerald-400 hover:to-emerald-500'
+              }`}>
+              {confirmText}
+            </button>
           </div>
         </div>
       </div>

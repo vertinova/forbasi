@@ -7,6 +7,50 @@ function normBigInt(row) {
   );
 }
 
+/**
+ * Normalizes a stored file path to "subfolder/filename" format.
+ * Old PHP records stored paths like "/forbasi/php/uploads/generated_kta_pb/KTA_PB_xxx.pdf"
+ * or sometimes just the bare filename "KTA_PB_xxx.pdf".
+ * The new Node.js backend expects "generated_kta_pb/KTA_PB_xxx.pdf".
+ */
+function normalizePath(storedPath, defaultSubdir) {
+  if (!storedPath) return storedPath;
+  // Contains /uploads/ — strip everything up to and including it
+  const uploadsIdx = storedPath.indexOf('/uploads/');
+  if (uploadsIdx !== -1) {
+    return storedPath.slice(uploadsIdx + '/uploads/'.length);
+  }
+  // Already "subdir/filename" format (contains / but doesn't start with /)
+  if (storedPath.includes('/') && !storedPath.startsWith('/')) {
+    return storedPath;
+  }
+  // Just a bare filename — prepend the default subfolder
+  const baseName = storedPath.replace(/\\/g, '/').split('/').pop();
+  return defaultSubdir ? `${defaultSubdir}/${baseName}` : baseName;
+}
+
+const FILE_FIELDS = [
+  { field: 'logo_path',                    dir: 'kta_files' },
+  { field: 'ad_file_path',                 dir: 'kta_files' },
+  { field: 'art_file_path',                dir: 'kta_files' },
+  { field: 'sk_file_path',                 dir: 'kta_files' },
+  { field: 'payment_proof_path',           dir: 'kta_files' },
+  { field: 'generated_kta_file_path',      dir: 'generated_kta' },
+  { field: 'generated_kta_file_path_pengda', dir: 'generated_kta_pengda' },
+  { field: 'generated_kta_file_path_pb',   dir: 'generated_kta_pb' },
+  { field: 'pengcab_payment_proof_path',   dir: 'pengcab_payment_proofs' },
+  { field: 'pengda_payment_proof_path',    dir: 'pengda_payment_proofs' },
+];
+
+function normalizeRow(row) {
+  if (!row) return row;
+  const out = normBigInt(row);
+  for (const { field, dir } of FILE_FIELDS) {
+    if (out[field] != null) out[field] = normalizePath(out[field], dir);
+  }
+  return out;
+}
+
 const KtaApplication = {
   async findById(id) {
     const rows = await prisma.$queryRaw`
@@ -18,11 +62,11 @@ const KtaApplication = {
       LEFT JOIN cities c ON u.city_id = c.id
       WHERE ka.id = ${id}
     `;
-    return rows[0] || null;
+    return normalizeRow(rows[0] || null);
   },
 
   async findByUserId(userId) {
-    return prisma.$queryRaw`
+    const rows = await prisma.$queryRaw`
       SELECT ka.*, p.name as province_name, c.name as city_name
       FROM kta_applications ka
       LEFT JOIN provinces p ON ka.province_id = p.id
@@ -30,6 +74,7 @@ const KtaApplication = {
       WHERE ka.user_id = ${userId}
       ORDER BY ka.created_at DESC
     `;
+    return rows.map(normalizeRow);
   },
 
   async create(data) {
@@ -62,7 +107,16 @@ const KtaApplication = {
     const conds = ['1=1'];
     const args = [];
 
-    if (filters.status) { conds.push('ka.status = ?'); args.push(filters.status); }
+    if (filters.status) {
+      const statuses = filters.status.split(',').map(s => s.trim()).filter(Boolean);
+      if (statuses.length > 1) {
+        conds.push(`ka.status IN (${statuses.map(() => '?').join(',')})`);
+        args.push(...statuses);
+      } else {
+        conds.push('ka.status = ?');
+        args.push(statuses[0]);
+      }
+    }
     if (filters.province_id) { conds.push('ka.province_id = ?'); args.push(parseInt(filters.province_id)); }
     if (filters.city_id) { conds.push('ka.city_id = ?'); args.push(parseInt(filters.city_id)); }
     if (filters.search) {
@@ -101,7 +155,8 @@ const KtaApplication = {
       args.push(parseInt(filters.limit), filters.offset ? parseInt(filters.offset) : 0);
     }
 
-    return prisma.$queryRawUnsafe(sql, ...args);
+    const rows = await prisma.$queryRawUnsafe(sql, ...args);
+    return rows.map(normalizeRow);
   },
 
   async getStats(filters = {}) {
@@ -136,7 +191,16 @@ const KtaApplication = {
     const conds = ['1=1'];
     const args = [];
 
-    if (filters.status) { conds.push('ka.status = ?'); args.push(filters.status); }
+    if (filters.status) {
+      const statuses = filters.status.split(',').map(s => s.trim()).filter(Boolean);
+      if (statuses.length > 1) {
+        conds.push(`ka.status IN (${statuses.map(() => '?').join(',')})`);
+        args.push(...statuses);
+      } else {
+        conds.push('ka.status = ?');
+        args.push(statuses[0]);
+      }
+    }
     if (filters.province_id) { conds.push('ka.province_id = ?'); args.push(parseInt(filters.province_id)); }
 
     const rows = await prisma.$queryRawUnsafe(

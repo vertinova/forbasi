@@ -1,6 +1,7 @@
 const multer = require('multer');
 const path = require('path');
 const crypto = require('crypto');
+const fs = require('fs');
 
 // Generate unique filename
 const generateFilename = (file) => {
@@ -87,13 +88,19 @@ const generalUpload = multer({
   limits: { fileSize: parseInt(process.env.MAX_FILE_SIZE) || 2097152 }
 });
 
-// Config upload (signatures, stamps)
+// Config upload (signatures, stamps) — save to role-specific directory
 const configStorage = multer.diskStorage({
   destination: (req, file, cb) => {
-    cb(null, path.join(__dirname, '../../uploads/config'));
+    const roleId = req.user?.role_id;
+    const roleDir = roleId === 2 ? 'pengcab_kta_configs' : roleId === 3 ? 'pengda_kta_configs' : 'pb_kta_configs';
+    const dir = path.join(__dirname, '../../uploads', roleDir);
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+    cb(null, dir);
   },
   filename: (req, file, cb) => {
-    cb(null, `config_${generateFilename(file)}`);
+    const roleId = req.user?.role_id;
+    const prefix = roleId === 2 ? 'pengcab' : roleId === 3 ? 'pengda' : 'pb';
+    cb(null, `${prefix}_${file.fieldname}_${req.user.id}_${generateFilename(file)}`);
   }
 });
 

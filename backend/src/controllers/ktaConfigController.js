@@ -25,14 +25,25 @@ exports.getConfig = async (req, res) => {
 exports.saveConfig = async (req, res) => {
   try {
     const { id, role_id } = req.user;
-    const { ketua_umum_name, bank_account_number } = req.body;
+    const { ketua_umum_name, bank_account_number, signature_data_url } = req.body;
     const updateData = {};
 
     if (ketua_umum_name) updateData.ketua_umum_name = ketua_umum_name;
 
-    // Handle signature upload
-    if (req.files?.signature) {
-      const roleDir = role_id === 2 ? 'pengcab_kta_configs' : role_id === 3 ? 'pengda_kta_configs' : 'pb_kta_configs';
+    const roleDir = role_id === 2 ? 'pengcab_kta_configs' : role_id === 3 ? 'pengda_kta_configs' : 'pb_kta_configs';
+    const prefix = role_id === 2 ? 'pengcab' : role_id === 3 ? 'pengda' : 'pb';
+
+    // Handle canvas-drawn signature (base64 data URL)
+    if (signature_data_url && typeof signature_data_url === 'string' && signature_data_url.startsWith('data:image/png;base64,')) {
+      const uploadDir = path.join(__dirname, '../../uploads', roleDir);
+      ensureDir(uploadDir);
+      const base64Data = signature_data_url.replace(/^data:image\/png;base64,/, '');
+      const filename = `${prefix}_signature_${id}_${Date.now()}.png`;
+      fs.writeFileSync(path.join(uploadDir, filename), Buffer.from(base64Data, 'base64'));
+      updateData.signature_image_path = filename;
+    }
+    // Handle signature file upload (fallback)
+    else if (req.files?.signature) {
       const uploadDir = path.join(__dirname, '../../uploads', roleDir);
       ensureDir(uploadDir);
       updateData.signature_image_path = req.files.signature[0].filename;
@@ -40,7 +51,6 @@ exports.saveConfig = async (req, res) => {
 
     // Handle stamp upload (pengda and pb only)
     if (req.files?.stamp && [3, 4].includes(role_id)) {
-      const roleDir = role_id === 3 ? 'pengda_kta_configs' : 'pb_kta_configs';
       const uploadDir = path.join(__dirname, '../../uploads', roleDir);
       ensureDir(uploadDir);
       updateData.stamp_image_path = req.files.stamp[0].filename;

@@ -5,6 +5,7 @@ const User = require('../models/User');
 const { LicenseUser } = require('../models/License');
 const { SuperAdmin } = require('../models/Common');
 const { sendEmail } = require('../utils/emailSender');
+const prisma = require('../lib/prisma');
 
 // Generate tokens
 const generateAccessToken = (payload) => {
@@ -99,6 +100,13 @@ exports.login = async (req, res) => {
         const accessToken = generateAccessToken(tokenPayload);
         const refreshToken = generateRefreshToken(tokenPayload);
 
+        // Fetch logo_path from latest KTA application
+        const latestKta = await prisma.kta_applications.findFirst({
+          where: { user_id: user.id },
+          orderBy: { id: 'desc' },
+          select: { logo_path: true }
+        });
+
         return res.json({
           success: true,
           message: 'Login berhasil',
@@ -112,7 +120,8 @@ exports.login = async (req, res) => {
               role: getRoleName(user.role_id),
               province_id: user.province_id,
               city_id: user.city_id,
-              user_type: 'user'
+              user_type: 'user',
+              logo_path: latestKta?.logo_path || null
             },
             accessToken,
             refreshToken
@@ -177,6 +186,14 @@ exports.getMe = async (req, res) => {
         delete userData.reset_token_expires_at;
         userData.user_type = 'user';
         userData.role = getRoleName(userData.role_id);
+
+        // Fetch logo_path from latest KTA application
+        const latestKta = await prisma.kta_applications.findFirst({
+          where: { user_id: id },
+          orderBy: { id: 'desc' },
+          select: { logo_path: true }
+        });
+        userData.logo_path = latestKta?.logo_path || null;
       }
     }
 

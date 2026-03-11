@@ -31,10 +31,6 @@ import ConfirmModal from '../../components/common/ConfirmModal';
 import { StatusBadge, formatRupiah } from '../../components/common/DashboardUI';
 import api from '../../services/api';
 import toast from 'react-hot-toast';
-import ManageLicense from '../license/ManageLicense';
-import KejurnasManage from '../kejurnas/KejurnasManage';
-import KtaConfigPage from '../config/KtaConfigPage';
-import ManageReregistration from '../config/ManageReregistration';
 
 /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
    CONSTANTS
@@ -51,42 +47,45 @@ const SECTIONS = [
   { key: 'pengguna',   label: 'Pengguna',       icon: 'fa-users'          },
   { key: 'log',        label: 'Log Aktivitas',  icon: 'fa-history'        },
   { key: 'profil',     label: 'Profil',         icon: 'fa-user-cog'       },
-  { divider: true, dividerLabel: 'Fitur' },
-  { key: 'lisensi',       label: 'Kelola Lisensi',   icon: 'fa-id-badge' },
-  { key: 'kejurnas',      label: 'Kejurnas',         icon: 'fa-trophy'   },
-  { key: 'kta_config',    label: 'Konfigurasi KTA',  icon: 'fa-cogs'     },
-  { key: 'daftar_ulang',  label: 'Daftar Ulang',     icon: 'fa-redo'     },
 ];
 const ROLE_LABELS = { 1: 'Anggota', 2: 'Pengcab', 3: 'Pengda', 4: 'PB' };
+const TAB_FILTERS = [
+  { key: 'all',             label: 'Semua'        },
+  { key: 'needs_pb_action', label: 'Menunggu PB'  },
+  { key: 'approved_pb',     label: 'Approved'     },
+  { key: 'kta_issued',      label: 'KTA Terbit'   },
+  { key: 'rejected_pb',     label: 'Ditolak'      },
+];
+
 /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
    DESIGN SYSTEM — Atoms (using MainLayout components)
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
-const INPUT  = 'w-full px-3.5 py-2.5 text-sm bg-white/[0.05] border border-white/[0.08] text-gray-200 placeholder-gray-500 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500/50 transition-all duration-150';
-const SELECT = 'px-3 py-2 text-sm bg-white/[0.05] border border-white/[0.08] text-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500/50 transition-all duration-150 cursor-pointer';
+const INPUT  = 'w-full px-3.5 py-2.5 text-sm bg-white border border-gray-200 text-gray-800 placeholder-gray-400 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all duration-150';
+const SELECT = 'px-3 py-2 text-sm bg-white border border-gray-200 text-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all duration-150 cursor-pointer';
 
 const BtnPrimary = ({ children, onClick, disabled, type = 'button', sm, className = '' }) => (
   <button type={type} onClick={onClick} disabled={disabled}
-    className={`inline-flex items-center gap-2 ${sm ? 'px-3.5 py-1.5 text-xs' : 'px-5 py-2 text-sm'} rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-600 text-white font-semibold tracking-tight shadow-lg shadow-emerald-500/20 ring-1 ring-emerald-400/20 hover:from-emerald-400 hover:to-emerald-500 hover:shadow-xl hover:shadow-emerald-500/30 active:scale-[0.97] active:brightness-95 disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-150 ${className}`}>
+    className={`inline-flex items-center gap-2 ${sm ? 'px-3.5 py-1.5 text-xs' : 'px-5 py-2 text-sm'} rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-600 text-white font-semibold tracking-tight shadow-md shadow-emerald-500/25 ring-1 ring-emerald-700/20 hover:from-emerald-400 hover:to-emerald-500 hover:shadow-lg hover:shadow-emerald-500/30 active:scale-[0.97] active:brightness-95 disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-150 ${className}`}>
     {children}
   </button>
 );
 
 const BtnGhost = ({ children, onClick, href, target, rel, sm, className = '' }) => {
-  const c = `inline-flex items-center gap-2 ${sm ? 'px-3.5 py-1.5 text-xs' : 'px-4 py-2 text-sm'} rounded-xl bg-white/[0.05] border border-white/[0.08] text-gray-400 font-medium hover:bg-white/[0.08] hover:border-white/[0.12] hover:text-white active:scale-[0.97] transition-all duration-150 ${className}`;
+  const c = `inline-flex items-center gap-2 ${sm ? 'px-3.5 py-1.5 text-xs' : 'px-4 py-2 text-sm'} rounded-xl bg-white border border-gray-200 text-gray-600 font-medium shadow-sm hover:bg-gray-50 hover:border-gray-300 hover:text-gray-900 active:scale-[0.97] transition-all duration-150 ${className}`;
   if (href) return <a href={href} target={target} rel={rel} className={c}>{children}</a>;
   return <button type="button" onClick={onClick} className={c}>{children}</button>;
 };
 
 const BtnDanger = ({ children, onClick, sm, className = '' }) => (
   <button type="button" onClick={onClick}
-    className={`inline-flex items-center gap-2 ${sm ? 'px-3.5 py-1.5 text-xs' : 'px-4 py-2 text-sm'} rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 font-medium hover:bg-red-500/20 hover:border-red-500/30 hover:text-red-300 active:scale-[0.97] transition-all duration-150 ${className}`}>
+    className={`inline-flex items-center gap-2 ${sm ? 'px-3.5 py-1.5 text-xs' : 'px-4 py-2 text-sm'} rounded-xl bg-white border border-red-200 text-red-600 font-medium shadow-sm hover:bg-red-50 hover:border-red-300 hover:text-red-700 active:scale-[0.97] transition-all duration-150 ${className}`}>
     {children}
   </button>
 );
 
 const BtnApprove = ({ children, onClick }) => (
   <button type="button" onClick={onClick}
-    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-xl bg-emerald-500 text-white font-semibold shadow-lg shadow-emerald-500/20 hover:bg-emerald-600 hover:shadow-xl active:scale-[0.97] transition-all">
+    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-xl bg-emerald-500 text-white font-semibold shadow-sm shadow-emerald-500/25 hover:bg-emerald-600 hover:shadow-md active:scale-[0.97] transition-all">
     {children}
   </button>
 );
@@ -101,7 +100,7 @@ const PanelHeader = ({ icon, grad = 'from-emerald-500 to-emerald-600', title, su
         <i className={`fas ${icon} text-white text-sm`} />
       </div>
       <div>
-        <h2 className="m-0 text-[14px] font-bold text-white leading-tight">{title}</h2>
+        <h2 className="m-0 text-[14px] font-bold text-gray-900 leading-tight">{title}</h2>
         {subtitle && <p className="m-0 mt-0.5 text-[11px] text-gray-500">{subtitle}</p>}
       </div>
     </div>
@@ -121,23 +120,23 @@ const GRAD_MAP = {
 };
 
 const ACCENT = {
-  emerald: 'border-emerald-500/20 hover:border-emerald-500/30',
-  amber:   'border-amber-500/20 hover:border-amber-500/30',
-  blue:    'border-blue-500/20 hover:border-blue-500/30',
-  violet:  'border-violet-500/20 hover:border-violet-500/30',
-  red:     'border-red-500/20 hover:border-red-500/30',
-  cyan:    'border-cyan-500/20 hover:border-cyan-500/30',
+  emerald: 'border-emerald-200 hover:border-emerald-300',
+  amber:   'border-amber-200 hover:border-amber-300',
+  blue:    'border-blue-200 hover:border-blue-300',
+  violet:  'border-violet-200 hover:border-violet-300',
+  red:     'border-red-200 hover:border-red-300',
+  cyan:    'border-cyan-200 hover:border-cyan-300',
 };
 
 // StatCard uses local styling to support grad prop format
 const StatCard = ({ icon, grad, label, value, isText, accent = 'emerald' }) => (
-  <div className={`group bg-[#141620] border ${ACCENT[accent]} rounded-2xl p-4 flex items-center gap-3 hover:-translate-y-0.5 transition-all duration-200 overflow-hidden hover:bg-[#191c28]`}>
+  <div className={`group bg-white border ${ACCENT[accent]} rounded-2xl p-4 flex items-center gap-3 hover:-translate-y-0.5 transition-all duration-200 overflow-hidden shadow-sm hover:shadow-md`}>
     <div className={`w-11 h-11 rounded-xl bg-gradient-to-br ${grad} flex items-center justify-center shadow-lg flex-shrink-0`}>
       <i className={`fas ${icon} text-white text-sm`} />
     </div>
     <div className="min-w-0 flex-1">
       <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest mb-0.5 truncate">{label}</p>
-      <p className={`font-bold text-white leading-tight tracking-tight truncate ${isText ? 'text-sm' : 'text-[22px] leading-none'}`}>
+      <p className="text-[22px] font-bold text-gray-900 leading-none tracking-tight truncate">
         {isText ? value : (typeof value === 'number' ? value.toLocaleString('id-ID') : value)}
       </p>
     </div>
@@ -146,10 +145,10 @@ const StatCard = ({ icon, grad, label, value, isText, accent = 'emerald' }) => (
 
 const FileLink = ({ path, label = 'Lihat' }) => {
   const url = fileUrl(path);
-  if (!url) return <span className="text-gray-600 text-xs">—</span>;
+  if (!url) return <span className="text-gray-300 text-xs">—</span>;
   return (
     <a href={url} target="_blank" rel="noreferrer" onClick={e => e.stopPropagation()}
-      className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-blue-500 border border-blue-600 text-white text-[11px] font-bold shadow-sm hover:bg-blue-600 hover:shadow-md active:scale-[0.97] transition-all">
+      className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-blue-50 border border-blue-200 text-blue-600 text-[11px] font-semibold shadow-sm hover:bg-blue-100 hover:border-blue-300 hover:shadow-md active:scale-[0.97] transition-all">
       <i className="fas fa-arrow-up-right-from-square text-[9px]" />{label}
     </a>
   );
@@ -192,7 +191,7 @@ export default function PbDashboard() {
   const [visitorStats, setVisitorStats]       = useState(null);
   const [loading, setLoading]                 = useState(true);
   const [ktaSearch, setKtaSearch]             = useState('');
-  const [activeTab, setActiveTab]             = useState('needs_pb_action');
+  const [activeTab, setActiveTab]             = useState('all');
   const [rejectModal, setRejectModal]         = useState({ show:false, id:null });
   const [rejectReason, setRejectReason]       = useState('');
   const [detailModal, setDetailModal]         = useState({ show:false, app:null });
@@ -248,17 +247,14 @@ export default function PbDashboard() {
   const fetchKtaData = useCallback(async (page = 1) => {
     setLoading(true);
     try {
-      const statusFilter = {
+      const statusMap = {
         needs_pb_action: 'approved_pengda,pending_pengda_resubmit',
-        pending_awal:    'pending,approved_pengcab',
-        approved_pb:     'approved_pb',
-        kta_issued:      'kta_issued',
-        rejected_pb:     'rejected_pb',
+        approved_pb: 'approved_pb', kta_issued: 'kta_issued', rejected_pb: 'rejected_pb',
       };
-      const params = { search: ktaSearch, limit: 10, page };
+      const params = { search: ktaSearch, limit: 20, page };
       if (filterProvince) params.province_id = filterProvince;
       if (filterCity)     params.city_id     = filterCity;
-      if (activeTab !== 'all' && statusFilter[activeTab]) params.status = statusFilter[activeTab];
+      if (activeTab !== 'all' && statusMap[activeTab]) params.status = statusMap[activeTab];
       const [dashRes, appsRes, visitorRes] = await Promise.all([
         api.get('/admin/dashboard'),
         api.get('/kta/applications', { params }),
@@ -301,7 +297,7 @@ export default function PbDashboard() {
   const fetchIssuedKtas = useCallback(async (page = 1) => {
     setIssuedKtaLoading(true);
     try {
-      const params = { page, limit: 10 };
+      const params = { page, limit: 20 };
       if (filterProvince) params.province_id = filterProvince;
       if (filterCity)     params.city_id     = filterCity;
       if (issuedSearch)   params.search      = issuedSearch;
@@ -338,7 +334,7 @@ export default function PbDashboard() {
   const fetchUsers = useCallback(async (pg = 1) => {
     setUsersLoading(true);
     try {
-      const res = await api.get('/users/list', { params: { search: userSearch, role_id: userRoleFilter || undefined, page: pg, limit: 10 } });
+      const res = await api.get('/users/list', { params: { search: userSearch, role_id: userRoleFilter || undefined, page: pg, limit: 20 } });
       setUsers(res.data.data?.users || []);
       setUserPagination(res.data.data?.pagination || { total:0, page:1, totalPages:1 });
     } catch { toast.error('Gagal memuat pengguna'); }
@@ -446,23 +442,27 @@ export default function PbDashboard() {
   const NEEDS_PB = ['approved_pengda', 'pending_pengda_resubmit'];
   const tabCounts = {
     needs_pb_action: stats?.kta ? ((stats.kta.approved_pengda||0) + (stats.kta.pending_pengda_resubmit||0)) : 0,
-    approved_pb:     stats?.kta?.approved_pb || 0,
-    kta_issued:      stats?.kta?.kta_issued  || 0,
-    rejected_pb:     stats?.kta?.rejected_pb || 0,
-    pending_awal:    stats?.kta ? ((stats.kta.pending||0) + (stats.kta.approved_pengcab||0)) : 0,
+    approved_pb: stats?.kta?.approved_pb || 0,
+    kta_issued:  stats?.kta?.kta_issued  || 0,
+    rejected_pb: stats?.kta?.rejected_pb || 0,
   };
 
   /* ━━━━━ Sidebar menu ━━━━━ */
-  const menuItems = SECTIONS.map(s => {
-    if (s.divider) return s;
-    return {
+  const menuItems = [
+    ...SECTIONS.map(s => ({
       label:  s.label,
       icon:   <i className={`fas ${s.icon}`} />,
       onClick: () => setActiveSection(s.key),
       active:  activeSection === s.key,
       badge:   s.key === 'kta' && tabCounts.needs_pb_action > 0 ? tabCounts.needs_pb_action : null,
-    };
-  });
+    })),
+    { divider: true, dividerLabel: 'Fitur' },
+    { to: '/pb/license',         icon: <i className="fas fa-id-badge" />,  label: 'Kelola Lisensi'  },
+    { to: '/pb/notifications',   icon: <i className="fas fa-bell" />,      label: 'Push Notifikasi' },
+    { to: '/pb/kejurnas',        icon: <i className="fas fa-trophy" />,    label: 'Kejurnas'        },
+    { to: '/pb/kta-config',      icon: <i className="fas fa-cogs" />,      label: 'Konfigurasi KTA' },
+    { to: '/pb/reregistrations', icon: <i className="fas fa-redo" />,      label: 'Daftar Ulang'    },
+  ];
 
   /* ══════════════════════════════════════════════
      SECTION RENDERERS
@@ -477,7 +477,7 @@ export default function PbDashboard() {
       ) : (
         <div className="space-y-8">
           {/* Welcome Hero Banner */}
-          <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-emerald-600 via-emerald-500 to-teal-500 p-6 md:p-8 shadow-2xl shadow-emerald-500/10">
+          <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-emerald-600 via-emerald-500 to-teal-500 p-6 md:p-8 shadow-xl shadow-emerald-500/20">
             {/* Decorative elements */}
             <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/2 blur-3xl"/>
             <div className="absolute bottom-0 left-0 w-48 h-48 bg-teal-400/20 rounded-full translate-y-1/2 -translate-x-1/2 blur-2xl"/>
@@ -525,19 +525,22 @@ export default function PbDashboard() {
               </div>
               
               {/* New Modern Stat Cards */}
-              <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-4">
+              <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-5">
                 {[
-                  { icon:'fa-users',          iconBg:'bg-gradient-to-br from-violet-500 to-violet-600',  shadowColor:'shadow-violet-500/25',  label:'Total Anggota',  value:stats.users?.total || 0 },
-                  { icon:'fa-hourglass-half',  iconBg:'bg-gradient-to-br from-amber-500 to-amber-600',   shadowColor:'shadow-amber-500/25',   label:'Menunggu PB',    value:(stats.kta?.approved_pengda||0)+(stats.kta?.pending_pengda_resubmit||0), highlight:true },
-                  { icon:'fa-clock',           iconBg:'bg-gradient-to-br from-blue-500 to-blue-600',     shadowColor:'shadow-blue-500/25',    label:'Proses Pengcab', value:stats.kta?.pending || 0 },
-                  { icon:'fa-check-circle',    iconBg:'bg-gradient-to-br from-emerald-500 to-emerald-600',shadowColor:'shadow-emerald-500/25', label:'KTA Terbit',     value:stats.kta?.kta_issued || 0 },
-                  { icon:'fa-times-circle',    iconBg:'bg-gradient-to-br from-red-500 to-red-600',       shadowColor:'shadow-red-500/25',     label:'Ditolak',        value:stats.kta?.rejected || 0 },
-                  { icon:'fa-wallet',          iconBg:'bg-gradient-to-br from-cyan-500 to-cyan-600',     shadowColor:'shadow-cyan-500/25',    label:'Total Saldo',    value:formatRupiah(stats.balance?.total_saldo_masuk), isText:true },
+                  { icon:'users',          color:'violet',  label:'Total Anggota',  value:stats.users?.total || 0, trend:'+12%' },
+                  { icon:'hourglass-half', color:'amber',   label:'Menunggu PB',    value:(stats.kta?.approved_pengda||0)+(stats.kta?.pending_pengda_resubmit||0), highlight:true },
+                  { icon:'clock',          color:'blue',    label:'KTA Pending',    value:stats.kta?.pending || 0 },
+                  { icon:'check-circle',   color:'emerald', label:'KTA Terbit',     value:stats.kta?.kta_issued || 0 },
+                  { icon:'times-circle',   color:'red',     label:'Ditolak',        value:stats.kta?.rejected || 0 },
+                  { icon:'wallet',         color:'cyan',    label:'Total Saldo',    value:formatRupiah(stats.balance?.total_saldo_masuk), isText:true },
                 ].map((stat,idx)=>(
                   <div key={idx} 
-                    className={`relative group bg-[#141620] rounded-2xl p-4 border transition-all duration-300 hover:-translate-y-1 hover:bg-[#191c28] overflow-hidden
-                      ${stat.highlight ? 'border-amber-500/30 ring-1 ring-amber-500/20' : 'border-white/[0.06] hover:border-white/[0.1]'}
+                    className={`relative group bg-white rounded-2xl p-4 border transition-all duration-300 hover:-translate-y-1 hover:shadow-xl overflow-hidden
+                      ${stat.highlight ? 'border-amber-200 shadow-lg shadow-amber-100 ring-1 ring-amber-200' : 'border-gray-100 shadow-sm hover:border-gray-200'}
                     `}>
+                    {/* Background decoration */}
+                    <div className={`absolute -right-4 -bottom-4 w-20 h-20 rounded-full opacity-5 bg-${stat.color}-500`}/>
+                    
                     {/* Highlight badge */}
                     {stat.highlight && stat.value > 0 && (
                       <div className="absolute -top-1 -right-1">
@@ -552,14 +555,13 @@ export default function PbDashboard() {
                     
                     <div className="flex items-start justify-between gap-2 relative z-10">
                       <div className="flex-1 min-w-0">
-                        <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest mb-1 truncate">{stat.label}</p>
-                        <p className={`font-black tracking-tight ${stat.isText ? 'text-sm leading-snug' : 'text-2xl'} ${stat.highlight && stat.value > 0 ? 'text-amber-400' : 'text-white'}`}
-                           title={stat.isText ? stat.value : undefined}>
+                        <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-widest mb-1 truncate">{stat.label}</p>
+                        <p className={`text-2xl font-black tracking-tight truncate ${stat.highlight && stat.value > 0 ? 'text-amber-600' : 'text-gray-900'}`}>
                           {stat.isText ? stat.value : stat.value.toLocaleString('id-ID')}
                         </p>
                       </div>
-                      <div className={`w-10 h-10 rounded-xl ${stat.iconBg} flex items-center justify-center shadow-lg ${stat.shadowColor} flex-shrink-0 group-hover:scale-110 transition-transform`}>
-                        <i className={`fas ${stat.icon} text-white text-sm`}/>
+                      <div className={`w-11 h-11 rounded-xl bg-gradient-to-br from-${stat.color}-500 to-${stat.color}-600 flex items-center justify-center shadow-lg shadow-${stat.color}-500/25 flex-shrink-0 group-hover:scale-110 transition-transform`}>
+                        <i className={`fas fa-${stat.icon} text-white text-sm`}/>
                       </div>
                     </div>
                   </div>
@@ -572,14 +574,14 @@ export default function PbDashboard() {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mt-8">
             {/* Visitor Stats Card */}
             {visitorStats && (
-              <div className="bg-[#141620] rounded-2xl border border-white/[0.06] overflow-hidden">
-                <div className="px-5 py-4 border-b border-white/[0.06] bg-gradient-to-r from-blue-500/10 to-indigo-500/10">
+              <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+                <div className="px-5 py-4 border-b border-gray-100 bg-gradient-to-r from-blue-50 to-indigo-50">
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-blue-500/25">
                       <i className="fas fa-chart-line text-white text-sm"/>
                     </div>
                     <div>
-                      <h3 className="font-bold text-white text-sm">Statistik Pengunjung</h3>
+                      <h3 className="font-bold text-gray-900 text-sm">Statistik Pengunjung</h3>
                       <p className="text-[11px] text-gray-500">Laporan trafik website</p>
                     </div>
                   </div>
@@ -587,19 +589,19 @@ export default function PbDashboard() {
                 <div className="p-5">
                   <div className="space-y-3">
                     {[
-                      { icon:'eye',         iconBg:'bg-gradient-to-br from-blue-500 to-blue-600',    label:'Total Kunjungan',    value: visitorStats.totals?.total_visits || 0 },
-                      { icon:'user-check',  iconBg:'bg-gradient-to-br from-emerald-500 to-emerald-600', label:'Pengunjung Unik',    value: visitorStats.totals?.total_unique_visitors || 0 },
-                      { icon:'calendar-day',iconBg:'bg-gradient-to-br from-amber-500 to-amber-600',   label:'Kunjungan Hari Ini', value: visitorStats.daily?.[0]?.visit_count || 0 },
+                      { icon:'eye',         color:'blue',    label:'Total Kunjungan',    value: visitorStats.totals?.total_visits || 0 },
+                      { icon:'user-check',  color:'emerald', label:'Pengunjung Unik',    value: visitorStats.totals?.total_unique_visitors || 0 },
+                      { icon:'calendar-day',color:'amber',   label:'Kunjungan Hari Ini', value: visitorStats.daily?.[0]?.visit_count || 0 },
                     ].map((item,idx)=>(
-                      <div key={idx} className="flex items-center gap-3 p-3 rounded-xl bg-white/[0.04] hover:bg-white/[0.06] transition-colors">
-                        <div className={`w-9 h-9 rounded-lg ${item.iconBg} flex items-center justify-center shadow-md flex-shrink-0`}>
+                      <div key={idx} className="flex items-center gap-3 p-3 rounded-xl bg-gray-50 hover:bg-gray-100 transition-colors">
+                        <div className={`w-9 h-9 rounded-lg bg-gradient-to-br from-${item.color}-500 to-${item.color}-600 flex items-center justify-center shadow-md flex-shrink-0`}>
                           <i className={`fas fa-${item.icon} text-white text-xs`}/>
                         </div>
                         <div className="flex-1 min-w-0">
                           <p className="text-xs text-gray-500 mb-0.5">{item.label}</p>
-                          <p className="text-lg font-bold text-white">{item.value.toLocaleString('id-ID')}</p>
+                          <p className="text-lg font-bold text-gray-900">{item.value.toLocaleString('id-ID')}</p>
                         </div>
-                        <div className="text-gray-600">
+                        <div className="text-gray-300">
                           <i className="fas fa-chevron-right text-xs"/>
                         </div>
                       </div>
@@ -610,14 +612,14 @@ export default function PbDashboard() {
             )}
 
             {/* Quick Actions Card */}
-            <div className="bg-[#141620] rounded-2xl border border-white/[0.06] overflow-hidden">
-              <div className="px-5 py-4 border-b border-white/[0.06] bg-gradient-to-r from-amber-500/10 to-orange-500/10">
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+              <div className="px-5 py-4 border-b border-gray-100 bg-gradient-to-r from-amber-50 to-orange-50">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500 to-orange-500 flex items-center justify-center shadow-lg shadow-amber-500/25">
                     <i className="fas fa-bolt text-white text-sm"/>
                   </div>
                   <div>
-                    <h3 className="font-bold text-white text-sm">Aksi Cepat</h3>
+                    <h3 className="font-bold text-gray-900 text-sm">Aksi Cepat</h3>
                     <p className="text-[11px] text-gray-500">Pintasan menu populer</p>
                   </div>
                 </div>
@@ -625,21 +627,21 @@ export default function PbDashboard() {
               <div className="p-5">
                 <div className="grid grid-cols-2 gap-3">
                   {[
-                    { key:'lisensi',      icon:'id-badge', iconBg:'bg-gradient-to-br from-violet-500 to-violet-600', hoverCard:'hover:bg-violet-500/10 hover:border-violet-500/20', hoverText:'hover:text-violet-400', label:'Kelola Lisensi',  desc:'Atur lisensi' },
-                    { key:'kejurnas',     icon:'trophy',   iconBg:'bg-gradient-to-br from-amber-500 to-amber-600', hoverCard:'hover:bg-amber-500/10 hover:border-amber-500/20', hoverText:'hover:text-amber-400',  label:'Kejurnas',        desc:'Kelola kejuaraan' },
-                    { key:'daftar_ulang', icon:'redo',     iconBg:'bg-gradient-to-br from-cyan-500 to-cyan-600',   hoverCard:'hover:bg-cyan-500/10 hover:border-cyan-500/20',   hoverText:'hover:text-cyan-400',   label:'Daftar Ulang',    desc:'Re-registrasi' },
-                    { key:'kta_config',   icon:'cogs',     iconBg:'bg-gradient-to-br from-blue-500 to-blue-600',   hoverCard:'hover:bg-blue-500/10 hover:border-blue-500/20',   hoverText:'hover:text-blue-400',   label:'Konfigurasi KTA', desc:'Atur konfigurasi' },
+                    { to:'/pb/license',        icon:'id-badge', color:'violet', label:'Kelola Lisensi',  desc:'Atur lisensi' },
+                    { to:'/pb/notifications',  icon:'bell',     color:'blue',   label:'Push Notifikasi', desc:'Kirim pengumuman' },
+                    { to:'/pb/kejurnas',       icon:'trophy',   color:'amber',  label:'Kejurnas',        desc:'Kelola kejuaraan' },
+                    { to:'/pb/reregistrations',icon:'redo',     color:'cyan',   label:'Daftar Ulang',    desc:'Re-registrasi' },
                   ].map(lnk=>(
-                    <button key={lnk.key} onClick={() => setActiveSection(lnk.key)}
-                      className={`group flex items-center gap-3 p-3 rounded-xl bg-white/[0.04] ${lnk.hoverCard} border border-transparent transition-all duration-200 text-left cursor-pointer`}>
-                      <div className={`w-9 h-9 rounded-lg ${lnk.iconBg} flex items-center justify-center shadow-md group-hover:scale-110 transition-transform flex-shrink-0`}>
+                    <Link key={lnk.to} to={lnk.to}
+                      className={`group flex items-center gap-3 p-3 rounded-xl bg-gray-50 hover:bg-gradient-to-br hover:from-${lnk.color}-50 hover:to-${lnk.color}-100 border border-transparent hover:border-${lnk.color}-200 transition-all duration-200`}>
+                      <div className={`w-9 h-9 rounded-lg bg-gradient-to-br from-${lnk.color}-500 to-${lnk.color}-600 flex items-center justify-center shadow-md group-hover:scale-110 transition-transform flex-shrink-0`}>
                         <i className={`fas fa-${lnk.icon} text-white text-xs`}/>
                       </div>
                       <div className="min-w-0 flex-1">
-                        <p className={`text-sm font-bold text-gray-300 ${lnk.hoverText} transition-colors truncate`}>{lnk.label}</p>
+                        <p className="text-sm font-bold text-gray-900 group-hover:text-${lnk.color}-600 transition-colors truncate">{lnk.label}</p>
                         <p className="text-[10px] text-gray-500 truncate">{lnk.desc}</p>
                       </div>
-                    </button>
+                    </Link>
                   ))}
                 </div>
               </div>
@@ -648,7 +650,7 @@ export default function PbDashboard() {
 
           {/* Pending Actions Alert */}
           {tabCounts.needs_pb_action > 0 && (
-            <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-amber-500 via-orange-500 to-red-500 p-5 shadow-2xl shadow-amber-500/15 mt-8">
+            <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-amber-500 via-orange-500 to-red-500 p-5 shadow-lg shadow-amber-500/25 mt-8">
               {/* Decorative */}
               <div className="absolute top-0 right-0 opacity-10">
                 <i className="fas fa-bell text-[80px] text-white"/>
@@ -683,28 +685,18 @@ export default function PbDashboard() {
 
   /* ── KTA ── */
   const KTA_TABS = [
-    { key:'all',             label:'Semua',          desc:'Semua pengajuan',           icon:'fa-list',          dot:'bg-slate-400',   activeBg:'from-slate-600 to-slate-700',   activeShadow:''                       },
-    { key:'needs_pb_action', label:'Menunggu PB',    desc:'Perlu tindakan PB',         icon:'fa-bell',          dot:'bg-amber-400',   activeBg:'from-amber-500 to-orange-500',  activeShadow:'shadow-amber-500/30'    },
-    { key:'pending_awal',    label:'Proses Awal',    desc:'Pending & acc Pengcab',     icon:'fa-hourglass-half',dot:'bg-sky-400',     activeBg:'from-sky-500 to-blue-500',      activeShadow:'shadow-sky-500/30'      },
-    { key:'approved_pb',     label:'Disetujui PB',   desc:'Menunggu penerbitan KTA',   icon:'fa-check-circle',  dot:'bg-blue-400',    activeBg:'from-blue-500 to-blue-600',     activeShadow:'shadow-blue-500/30'     },
-    { key:'kta_issued',      label:'KTA Terbit',     desc:'KTA sudah diterbitkan',     icon:'fa-id-card',       dot:'bg-emerald-400', activeBg:'from-emerald-500 to-teal-500',  activeShadow:'shadow-emerald-500/30'  },
-    { key:'rejected_pb',     label:'Ditolak PB',     desc:'Ditolak oleh PB',           icon:'fa-times-circle',  dot:'bg-red-400',     activeBg:'from-red-500 to-red-600',       activeShadow:'shadow-red-500/30'      },
+    { key:'all',             label:'Semua',       dot:'bg-slate-500',   activeBg:'from-slate-600 to-slate-700',   activeShadow:''                        },
+    { key:'needs_pb_action', label:'Menunggu PB', dot:'bg-amber-400',   activeBg:'from-amber-500 to-orange-500',  activeShadow:'shadow-amber-500/30'     },
+    { key:'approved_pb',     label:'Approved',    dot:'bg-blue-400',    activeBg:'from-blue-500 to-blue-600',     activeShadow:'shadow-blue-500/30'      },
+    { key:'kta_issued',      label:'KTA Terbit',  dot:'bg-emerald-400', activeBg:'from-emerald-500 to-teal-500',  activeShadow:'shadow-emerald-500/30'   },
+    { key:'rejected_pb',     label:'Ditolak',     dot:'bg-red-400',     activeBg:'from-red-500 to-red-600',       activeShadow:'shadow-red-500/30'       },
   ];
-
-  const KTA_STATUS_MAP = {
-    all:             null,
-    needs_pb_action: 'approved_pengda,pending_pengda_resubmit',
-    pending_awal:    'pending,approved_pengcab',
-    approved_pb:     'approved_pb',
-    kta_issued:      'kta_issued',
-    rejected_pb:     'rejected_pb',
-  };
 
   const renderKtaSection = () => (
     <div className="space-y-4">
       <Panel>
         {/* ── Header ── */}
-        <div className="px-6 pt-5 pb-5 border-b border-white/[0.06] space-y-4">
+        <div className="px-6 pt-5 pb-5 border-b border-gray-100 space-y-4">
 
           {/* Title row */}
           <div className="flex items-center gap-3">
@@ -712,82 +704,73 @@ export default function PbDashboard() {
               <i className="fas fa-file-alt text-white text-sm"/>
             </div>
             <div>
-              <h2 className="m-0 text-base font-bold text-white leading-tight">Pengajuan KTA</h2>
+              <h2 className="m-0 text-base font-bold text-gray-900 leading-tight">Pengajuan KTA</h2>
               <p className="m-0 mt-0.5 text-[11px] text-gray-500">
-                <span className="text-emerald-400 font-semibold">{ktaPagination.total||0}</span> total pengajuan terdaftar
+                <span className="text-emerald-600 font-semibold">{ktaPagination.total||0}</span> total pengajuan terdaftar
               </p>
             </div>
           </div>
 
           {/* ── Filter strip ── */}
-          <div className="flex items-center gap-2 flex-wrap p-3 bg-white/[0.03] border border-white/[0.06] rounded-2xl">
+          <div className="flex items-center gap-2 flex-wrap p-3 bg-gray-50 border border-gray-200 rounded-2xl">
             {/* Province */}
-            <div className="flex items-center gap-2 px-3 py-2 bg-white/[0.05] border border-white/[0.08] rounded-xl hover:border-emerald-500/30 focus-within:border-emerald-500/40 focus-within:ring-2 focus-within:ring-emerald-500/20 transition-all">
-              <i className="fas fa-map-marker-alt text-emerald-400 text-[11px] flex-shrink-0"/>
+            <div className="flex items-center gap-2 px-3 py-2 bg-white border border-gray-200 rounded-xl shadow-sm hover:border-emerald-300 focus-within:border-emerald-400 focus-within:ring-2 focus-within:ring-emerald-500/15 transition-all">
+              <i className="fas fa-map-marker-alt text-emerald-500 text-[11px] flex-shrink-0"/>
               <select value={filterProvince} onChange={e=>setFilterProvince(e.target.value)}
-                className="text-xs bg-transparent border-none text-gray-300 focus:outline-none cursor-pointer pr-1 min-w-[110px]">
+                className="text-xs bg-transparent border-none text-gray-700 focus:outline-none cursor-pointer pr-1 min-w-[110px]">
                 <option value="">Semua Provinsi</option>
                 {provinces.map(p=><option key={p.id} value={p.id}>{p.name}</option>)}
               </select>
             </div>
             {/* City */}
-            <div className={`flex items-center gap-2 px-3 py-2 bg-white/[0.05] border rounded-xl transition-all ${filterProvince ? 'border-white/[0.08] hover:border-emerald-500/30 focus-within:border-emerald-500/40 focus-within:ring-2 focus-within:ring-emerald-500/20' : 'border-white/[0.04] opacity-40 pointer-events-none'}`}>
-              <i className="fas fa-city text-emerald-400 text-[11px] flex-shrink-0"/>
+            <div className={`flex items-center gap-2 px-3 py-2 bg-white border rounded-xl shadow-sm transition-all ${filterProvince ? 'border-gray-200 hover:border-emerald-300 focus-within:border-emerald-400 focus-within:ring-2 focus-within:ring-emerald-500/15' : 'border-gray-100 opacity-40 pointer-events-none'}`}>
+              <i className="fas fa-city text-emerald-500 text-[11px] flex-shrink-0"/>
               <select value={filterCity} onChange={e=>setFilterCity(e.target.value)} disabled={!filterProvince}
-                className="text-xs bg-transparent border-none text-gray-300 focus:outline-none cursor-pointer pr-1 min-w-[100px]">
+                className="text-xs bg-transparent border-none text-gray-700 focus:outline-none cursor-pointer pr-1 min-w-[100px]">
                 <option value="">Semua Kota</option>
                 {cities.map(c=><option key={c.id} value={c.id}>{c.name}</option>)}
               </select>
             </div>
             {/* Search */}
-            <div className="flex items-center gap-2 px-3 py-2 bg-white/[0.05] border border-white/[0.08] rounded-xl hover:border-emerald-500/30 focus-within:border-emerald-500/40 focus-within:ring-2 focus-within:ring-emerald-500/20 transition-all flex-1 min-w-[160px] max-w-[220px]">
-              <i className="fas fa-magnifying-glass text-gray-500 text-[11px] flex-shrink-0"/>
+            <div className="flex items-center gap-2 px-3 py-2 bg-white border border-gray-200 rounded-xl shadow-sm hover:border-emerald-300 focus-within:border-emerald-400 focus-within:ring-2 focus-within:ring-emerald-500/15 transition-all flex-1 min-w-[160px] max-w-[220px]">
+              <i className="fas fa-magnifying-glass text-gray-400 text-[11px] flex-shrink-0"/>
               <input type="text" value={ktaSearch} onChange={e=>setKtaSearch(e.target.value)}
                 onKeyDown={e=>e.key==='Enter'&&fetchKtaData(1)} placeholder="Cari nama klub…"
-                className="text-xs bg-transparent border-none text-gray-200 placeholder-gray-500 focus:outline-none w-full"/>
+                className="text-xs bg-transparent border-none text-gray-800 placeholder-gray-400 focus:outline-none w-full"/>
             </div>
             {/* Divider */}
-            <div className="h-7 w-px bg-white/[0.06] hidden sm:block"/>
+            <div className="h-7 w-px bg-gray-200 hidden sm:block"/>
             {/* Search btn */}
             <button onClick={()=>fetchKtaData(1)}
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-600 text-white text-xs font-semibold shadow-lg shadow-emerald-500/20 ring-1 ring-emerald-400/20 hover:from-emerald-400 hover:to-emerald-500 hover:shadow-xl active:scale-[0.97] transition-all">
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-600 text-white text-xs font-semibold shadow-md shadow-emerald-500/25 ring-1 ring-emerald-700/20 hover:from-emerald-400 hover:to-emerald-500 hover:shadow-lg active:scale-[0.97] transition-all">
               <i className="fas fa-search text-[10px]"/>Cari
             </button>
             {(ktaSearch||filterProvince||filterCity||activeTab!=='all') && (
               <button onClick={()=>{setKtaSearch('');setFilterProvince('');setFilterCity('');setActiveTab('all');}}
-                className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-white/[0.05] border border-white/[0.08] text-gray-400 text-xs font-medium hover:bg-red-500/10 hover:border-red-500/20 hover:text-red-400 active:scale-[0.97] transition-all">
+                className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-white border border-gray-200 text-gray-500 text-xs font-medium shadow-sm hover:bg-gray-50 hover:border-red-200 hover:text-red-500 active:scale-[0.97] transition-all">
                 <i className="fas fa-xmark text-[10px]"/>Reset
               </button>
             )}
           </div>
 
           {/* ── Status Tabs ── */}
-          <div className="flex gap-2 flex-wrap">
+          <div className="flex gap-1.5 flex-wrap">
             {KTA_TABS.map(tab => {
               const count = tab.key === 'all' ? ktaPagination.total : (tabCounts[tab.key] || 0);
               const isActive = activeTab === tab.key;
-              const isUrgent = tab.key === 'needs_pb_action' && count > 0;
               return (
                 <button key={tab.key} onClick={()=>setActiveTab(tab.key)}
-                  className={`relative inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold transition-all duration-200
-                    ${isActive
+                  className={`relative inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold transition-all duration-200 ${
+                    isActive
                       ? `bg-gradient-to-r ${tab.activeBg} text-white shadow-lg ${tab.activeShadow}`
-                      : isUrgent
-                        ? 'bg-amber-500/10 border border-amber-500/30 text-amber-400 hover:bg-amber-500/15'
-                        : 'bg-white/[0.04] border border-white/[0.06] text-gray-400 hover:text-white hover:border-white/[0.1] hover:bg-white/[0.06]'
-                    }`}>
-                  <i className={`fas ${tab.icon} text-[10px] ${isActive ? 'text-white/80' : ''}`}/>
-                  <span>{tab.label}</span>
+                      : 'bg-gray-100 border border-gray-200 text-gray-500 hover:text-gray-900 hover:border-gray-300 hover:bg-gray-200'
+                  }`}>
+                  <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${isActive ? 'bg-white/70' : tab.dot}`}/>
+                  {tab.label}
                   {count > 0 && (
                     <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-bold leading-none ${
-                      isActive ? 'bg-white/25 text-white' : isUrgent ? 'bg-amber-500 text-white' : 'bg-white/[0.1] text-gray-400'
+                      isActive ? 'bg-white/20 text-white' : 'bg-gray-200 text-gray-600'
                     }`}>{count > 999 ? '999+' : count}</span>
-                  )}
-                  {isUrgent && !isActive && (
-                    <span className="absolute -top-1 -right-1 flex h-2.5 w-2.5">
-                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"/>
-                      <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-amber-500"/>
-                    </span>
                   )}
                 </button>
               );
@@ -804,25 +787,25 @@ export default function PbDashboard() {
           <div className="overflow-x-auto">
             <table className="w-full min-w-[860px]">
               <thead>
-                <tr className="border-b border-white/[0.06]">
-                  <th className="px-5 py-3 text-left text-[10px] font-bold text-gray-500 uppercase tracking-widest bg-white/[0.02]">Nama Klub</th>
-                  <th className="px-4 py-3 text-left text-[10px] font-bold text-gray-500 uppercase tracking-widest bg-white/[0.02]">Wilayah</th>
-                  <th className="px-4 py-3 text-left text-[10px] font-bold text-gray-500 uppercase tracking-widest bg-white/[0.02]">Pembayaran</th>
-                  <th className="px-4 py-3 text-left text-[10px] font-bold text-gray-500 uppercase tracking-widest bg-white/[0.02]">File KTA</th>
-                  <th className="px-4 py-3 text-left text-[10px] font-bold text-gray-500 uppercase tracking-widest bg-white/[0.02]">Status</th>
-                  <th className="px-5 py-3 text-right text-[10px] font-bold text-gray-500 uppercase tracking-widest bg-white/[0.02]">Aksi</th>
+                <tr className="border-b border-gray-100">
+                  <th className="px-5 py-3 text-left text-[10px] font-bold text-gray-500 uppercase tracking-widest bg-gray-50">Nama Klub</th>
+                  <th className="px-4 py-3 text-left text-[10px] font-bold text-gray-500 uppercase tracking-widest bg-gray-50">Wilayah</th>
+                  <th className="px-4 py-3 text-left text-[10px] font-bold text-gray-500 uppercase tracking-widest bg-gray-50">Pembayaran</th>
+                  <th className="px-4 py-3 text-left text-[10px] font-bold text-gray-500 uppercase tracking-widest bg-gray-50">File KTA</th>
+                  <th className="px-4 py-3 text-left text-[10px] font-bold text-gray-500 uppercase tracking-widest bg-gray-50">Status</th>
+                  <th className="px-5 py-3 text-right text-[10px] font-bold text-gray-500 uppercase tracking-widest bg-gray-50">Aksi</th>
                 </tr>
               </thead>
               <tbody>
                 {applications.map((app, idx) => (
                   <tr key={app.id}
-                    className={`border-b border-white/[0.04] hover:bg-white/[0.03] transition-colors duration-100 ${idx % 2 === 0 ? '' : 'bg-white/[0.02]'}`}>
+                    className={`border-b border-gray-100 hover:bg-gray-50 transition-colors duration-100 ${idx % 2 === 0 ? '' : 'bg-gray-50/50'}`}>
                     {/* Klub */}
                     <td className="px-5 py-3.5">
                       <div className="flex items-center gap-2.5">
                         <Avatar name={app.club_name}/>
                         <div className="min-w-0">
-                          <p className="text-sm font-semibold text-white m-0 leading-tight truncate max-w-[200px]">{app.club_name}</p>
+                          <p className="text-sm font-semibold text-gray-900 m-0 leading-tight truncate max-w-[200px]">{app.club_name}</p>
                           <p className="text-[10px] text-gray-400 m-0 mt-0.5 font-mono">#{app.id}</p>
                         </div>
                       </div>
@@ -830,7 +813,7 @@ export default function PbDashboard() {
                     {/* Wilayah */}
                     <td className="px-4 py-3.5">
                       <div className="flex flex-col gap-0.5">
-                        <span className="text-xs text-gray-400 leading-tight">{app.province_name||app.province||'—'}</span>
+                        <span className="text-xs text-gray-700 leading-tight">{app.province_name||app.province||'—'}</span>
                         <span className="text-[11px] text-gray-500">{app.city_name||app.regency||'—'}</span>
                       </div>
                     </td>
@@ -841,7 +824,7 @@ export default function PbDashboard() {
                           ? <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-emerald-50 border border-emerald-200 text-emerald-700 text-[11px] font-bold rounded-full shadow-sm whitespace-nowrap">
                               <i className="fas fa-circle-dollar-sign text-emerald-500 text-[10px]"/>Rp {Number(app.nominal_paid).toLocaleString('id-ID')}
                             </span>
-                          : <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-white/[0.04] border border-white/[0.06] text-gray-500 text-[11px] font-medium rounded-full"><i className="fas fa-clock text-[10px]"/>Belum ada</span>}
+                          : <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-gray-100 border border-gray-200 text-gray-400 text-[11px] font-medium rounded-full"><i className="fas fa-clock text-[10px]"/>Belum ada</span>}
                         <FileLink path={app.payment_proof_path} label="Bukti"/>
                       </div>
                     </td>
@@ -857,7 +840,7 @@ export default function PbDashboard() {
                               className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-blue-500 text-white text-[11px] font-bold shadow-sm hover:bg-blue-600 hover:shadow-md active:scale-[0.97] transition-all">
                               <i className="fas fa-file-pdf text-[9px]"/>{f.label}
                             </a>
-                          : <span key={f.label} className="inline-flex items-center px-2.5 py-1 rounded-full bg-white/[0.04] border border-white/[0.06] text-gray-500 text-[11px] font-bold">{f.label}</span>
+                          : <span key={f.label} className="inline-flex items-center px-2.5 py-1 rounded-full bg-gray-100 border border-gray-200 text-gray-400 text-[11px] font-bold">{f.label}</span>
                         )}
                       </div>
                     </td>
@@ -875,7 +858,7 @@ export default function PbDashboard() {
                               <i className="fas fa-check text-[10px]"/>Setuju
                             </button>
                             <button onClick={()=>setRejectModal({show:true,id:app.id})} title="Tolak"
-                              className="w-7 h-7 flex items-center justify-center rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 hover:bg-red-500/20 hover:border-red-500/30 hover:text-red-300 active:scale-[0.97] transition-all">
+                              className="w-7 h-7 flex items-center justify-center rounded-xl bg-white border border-red-200 text-red-500 shadow-sm hover:bg-red-50 hover:border-red-300 hover:text-red-600 active:scale-[0.97] transition-all">
                               <i className="fas fa-times text-[10px]"/>
                             </button>
                           </>
@@ -892,8 +875,8 @@ export default function PbDashboard() {
                           <span className="text-gray-400 text-xs">—</span>
                         )}
                         <button type="button" onClick={()=>setDetailModal({show:true,app})} title="Detail"
-                          className="w-7 h-7 flex items-center justify-center rounded-xl bg-white/[0.05] border border-white/[0.08] text-gray-400 hover:bg-white/[0.08] hover:border-white/[0.12] hover:text-white active:scale-[0.97] transition-all">
-                          <i className="fas fa-eye text-[10px]"/>
+                          className="w-7 h-7 flex items-center justify-center rounded-xl bg-white border border-gray-200 text-gray-400 shadow-sm hover:bg-gray-50 hover:border-gray-300 hover:text-gray-600 active:scale-[0.97] transition-all">
+                          <i className="fas fa-ellipsis-h text-[10px]"/>
                         </button>
                       </div>
                     </td>
@@ -927,16 +910,16 @@ export default function PbDashboard() {
         : (
           <div className="overflow-x-auto">
             <table className="w-full">
-              <thead className="border-b border-white/[0.06]">
+              <thead className="border-b border-gray-100">
                 <tr>{['#','Klub','Ketua','Barcode','Wilayah','Terbit','PD/PC','Aksi'].map(c=><Th key={c}>{c}</Th>)}</tr>
               </thead>
               <tbody>
                 {issuedKtas.map((kta,idx)=>(
-                  <tr key={kta.id} className="border-b border-white/[0.04] hover:bg-white/[0.03] transition-colors">
-                    <Td><span className="text-gray-500 text-xs font-mono">{(issuedKtaPagination.page-1)*20+idx+1}</span></Td>
-                    <Td><div className="flex items-center gap-2"><Avatar name={kta.club_name}/><span className="font-semibold text-white">{kta.club_name}</span></div></Td>
-                    <Td><span className="text-gray-400">{kta.leader_name||'—'}</span></Td>
-                    <Td><code className="px-2 py-1 bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 text-[11px] font-mono rounded-lg">{kta.kta_barcode_unique_id||'—'}</code></Td>
+                  <tr key={kta.id} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
+                    <Td><span className="text-gray-400 text-xs font-mono">{(issuedKtaPagination.page-1)*20+idx+1}</span></Td>
+                    <Td><div className="flex items-center gap-2"><Avatar name={kta.club_name}/><span className="font-semibold text-gray-900">{kta.club_name}</span></div></Td>
+                    <Td><span className="text-gray-700">{kta.leader_name||'—'}</span></Td>
+                    <Td><code className="px-2 py-1 bg-indigo-50 border border-indigo-200 text-indigo-700 text-[11px] font-mono rounded-lg">{kta.kta_barcode_unique_id||'—'}</code></Td>
                     <Td><span className="text-gray-500">{[kta.province_name,kta.city_name].filter(Boolean).join(' · ')||'—'}</span></Td>
                     <Td><span className="text-gray-500 text-xs whitespace-nowrap">{kta.kta_issued_at?new Date(kta.kta_issued_at).toLocaleDateString('id-ID',{day:'2-digit',month:'short',year:'numeric'}):'—'}</span></Td>
                     <Td>
@@ -945,7 +928,7 @@ export default function PbDashboard() {
                           <span key={b.l} className={`inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-bold rounded-full shadow-sm ${
                             b.v
                               ? 'bg-emerald-500 text-white shadow-emerald-500/20'
-                              : 'bg-white/[0.04] border border-white/[0.06] text-gray-500'
+                              : 'bg-gray-100 border border-gray-200 text-gray-400'
                           }`}>{b.l} {b.v ? <i className="fas fa-check text-[8px]"/> : <i className="fas fa-xmark text-[8px]"/>}</span>
                         ))}
                       </div>
@@ -957,7 +940,7 @@ export default function PbDashboard() {
                           <i className="fas fa-eye text-xs"/>
                         </Link>
                         {kta.generated_kta_file_path_pb&&(
-                          <a href={fileUrl(kta.generated_kta_file_path_pb)} target="_blank" rel="noreferrer" title="Download KTA"
+                          <a href={`${API_BASE}/uploads/generated_kta_pb/${kta.generated_kta_file_path_pb}`} target="_blank" rel="noreferrer" title="Download KTA"
                             className="w-8 h-8 rounded-xl bg-emerald-500 text-white flex items-center justify-center shadow-sm shadow-emerald-500/25 hover:bg-emerald-600 hover:shadow-md active:scale-[0.97] transition-all">
                             <i className="fas fa-file-pdf text-xs"/>
                           </a>
@@ -980,7 +963,7 @@ export default function PbDashboard() {
     return (
       <div className="space-y-5">
         {/* Filter Periode */}
-        <div className="flex items-center gap-3 flex-wrap px-5 py-4 bg-[#141620] border border-white/[0.06] rounded-2xl">
+        <div className="flex items-center gap-3 flex-wrap px-5 py-4 bg-white border border-gray-100 rounded-2xl shadow-sm">
           <span className="flex items-center gap-2 text-[11px] font-bold text-gray-500 uppercase tracking-widest"><i className="fas fa-calendar text-emerald-500"/>Periode</span>
           <select value={saldoFilterMonth} onChange={e=>setSaldoFilterMonth(e.target.value)} className={SELECT}>
             <option value="">Semua Bulan</option>
@@ -1010,20 +993,20 @@ export default function PbDashboard() {
                 {label:'ke Pengda', amount:unpaidAmounts.hutang_pengda, count:unpaidAmounts.unpaid_kta_count_pengda, rate:35000, a:'violet'},
                 {label:'ke Pengcab',amount:unpaidAmounts.hutang_pengcab,count:unpaidAmounts.unpaid_kta_count_pengcab,rate:50000, a:'blue'},
               ].map((h,i)=>(
-                <div key={i} className="flex items-center justify-between p-4 rounded-xl bg-white/[0.03] border border-white/[0.06] flex-wrap gap-3">
+                <div key={i} className="flex items-center justify-between p-4 rounded-xl bg-gray-50 border border-gray-100 flex-wrap gap-3">
                   <div>
                     <p className="text-xs text-gray-500 mb-0.5">Belum Bayar {h.label}</p>
-                    <p className={`text-2xl font-bold ${h.a==='violet'?'text-violet-400':'text-blue-400'}`}>{formatRupiah(h.amount)}</p>
+                    <p className={`text-2xl font-bold ${h.a==='violet'?'text-violet-600':'text-blue-600'}`}>{formatRupiah(h.amount)}</p>
                   </div>
-                  <span className={`px-3 py-1.5 rounded-xl text-xs font-semibold ${h.a==='violet'?'bg-violet-500/10 border border-violet-500/20 text-violet-400':'bg-blue-500/10 border border-blue-500/20 text-blue-400'}`}>
+                  <span className={`px-3 py-1.5 rounded-xl text-xs font-semibold ${h.a==='violet'?'bg-violet-50 border border-violet-200 text-violet-700':'bg-blue-50 border border-blue-200 text-blue-700'}`}>
                     {h.count} KTA × Rp {h.rate.toLocaleString('id-ID')}
                   </span>
                 </div>
               ))}
-              <div className="flex gap-4 flex-wrap px-4 py-3 bg-emerald-500/10 border border-emerald-500/20 rounded-xl text-xs text-gray-400">
-                <span><i className="fas fa-file-alt text-emerald-400 mr-1.5"/>Terbit: <strong className="text-white">{unpaidAmounts.total_issued_kta}</strong></span>
-                <span><i className="fas fa-code text-amber-400 mr-1.5"/>Developer: <strong className="text-white">{formatRupiah(unpaidAmounts.hutang_developer)}</strong></span>
-                <span><i className="fas fa-building text-cyan-400 mr-1.5"/>PB Net: <strong className="text-white">{formatRupiah(unpaidAmounts.pb_net)}</strong></span>
+              <div className="flex gap-4 flex-wrap px-4 py-3 bg-emerald-50 border border-emerald-100 rounded-xl text-xs text-gray-500">
+                <span><i className="fas fa-file-alt text-emerald-400 mr-1.5"/>Terbit: <strong className="text-gray-900">{unpaidAmounts.total_issued_kta}</strong></span>
+                <span><i className="fas fa-code text-amber-400 mr-1.5"/>Developer: <strong className="text-gray-900">{formatRupiah(unpaidAmounts.hutang_developer)}</strong></span>
+                <span><i className="fas fa-building text-cyan-400 mr-1.5"/>PB Net: <strong className="text-gray-900">{formatRupiah(unpaidAmounts.pb_net)}</strong></span>
               </div>
             </div>
           </Panel>
@@ -1044,14 +1027,14 @@ export default function PbDashboard() {
         {recapModal.show&&(
           <div className="fixed inset-0 bg-black/70 backdrop-blur-md z-50 flex items-center justify-center p-4"
             onClick={e=>{if(e.target===e.currentTarget)setRecapModal({show:false});}}>
-            <div className="bg-[#141620] border border-white/[0.06] rounded-2xl p-6 w-full max-w-md max-h-[90vh] overflow-y-auto shadow-2xl">
+            <div className="bg-white border border-gray-200 rounded-2xl p-6 w-full max-w-md max-h-[90vh] overflow-y-auto shadow-2xl">
               <div className="flex items-center justify-between mb-5">
                 <div>
-                  <h3 className="text-base font-bold text-white m-0">Proses Rekap Pembayaran</h3>
+                  <h3 className="text-base font-bold text-gray-900 m-0">Proses Rekap Pembayaran</h3>
                   <p className="text-xs text-gray-500 m-0 mt-0.5">Catat pembayaran ke pengda / pengcab</p>
                 </div>
                 <button onClick={()=>setRecapModal({show:false})}
-                  className="w-8 h-8 rounded-xl bg-white/[0.05] border border-white/[0.08] text-gray-400 flex items-center justify-center hover:bg-white/[0.08] hover:text-white transition-all text-base">×</button>
+                  className="w-8 h-8 rounded-xl bg-gray-100 border border-gray-200 text-gray-500 flex items-center justify-center hover:bg-gray-200 hover:text-gray-700 transition-all text-base">×</button>
               </div>
               <form onSubmit={handleRecapSubmit} className="space-y-4">
                 <div>
@@ -1118,22 +1101,22 @@ export default function PbDashboard() {
         : (
           <div className="overflow-x-auto">
             <table className="w-full">
-              <thead className="border-b border-white/[0.06]">
+              <thead className="border-b border-gray-100">
                 <tr>{['#','Tanggal','Tipe','Penerima','Wilayah','Nominal','Catatan'].map(c=><Th key={c}>{c}</Th>)}</tr>
               </thead>
               <tbody>
                 {transactions.map((tx,i)=>(
-                  <tr key={tx.id||i} className="border-b border-white/[0.04] hover:bg-white/[0.03] transition-colors">
-                    <Td><span className="text-gray-500 text-xs font-mono">{i+1}</span></Td>
+                  <tr key={tx.id||i} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
+                    <Td><span className="text-gray-400 text-xs font-mono">{i+1}</span></Td>
                     <Td><span className="text-gray-500 text-xs whitespace-nowrap">{tx.paid_at?new Date(tx.paid_at).toLocaleDateString('id-ID',{day:'2-digit',month:'short',year:'numeric'}):'—'}</span></Td>
                     <Td><span className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-semibold rounded-full shadow-sm ${
                       tx.recipient_type==='pengda'
                         ? 'bg-violet-500 text-white shadow-violet-500/20'
                         : 'bg-blue-500 text-white shadow-blue-500/20'
                     }`}><i className={`fas ${tx.recipient_type==='pengda'?'fa-building':'fa-landmark'} text-[9px]`}/>{tx.recipient_type==='pengda'?'Pengda':'Pengcab'}</span></Td>
-                    <Td><span className="font-semibold text-white">{tx.recipient_name||'—'}</span></Td>
+                    <Td><span className="font-semibold text-gray-900">{tx.recipient_name||'—'}</span></Td>
                     <Td><span className="text-gray-500">{[tx.province_name,tx.city_name].filter(Boolean).join(' · ')||'—'}</span></Td>
-                    <Td><span className="font-bold text-red-400 whitespace-nowrap">{formatRupiah(tx.amount)}</span></Td>
+                    <Td><span className="font-bold text-red-600 whitespace-nowrap">{formatRupiah(tx.amount)}</span></Td>
                     <Td><span className="text-gray-500">{tx.notes||'—'}</span></Td>
                   </tr>
                 ))}
@@ -1167,25 +1150,25 @@ export default function PbDashboard() {
         : (
           <div className="overflow-x-auto">
             <table className="w-full">
-              <thead className="border-b border-white/[0.06]">
+              <thead className="border-b border-gray-100">
                 <tr>{['#','Nama','Username','Email','Role','Wilayah','Aksi'].map(c=><Th key={c}>{c}</Th>)}</tr>
               </thead>
               <tbody>
                 {users.map((u,i)=>{
                   const rC = u.role_id===4?'amber':u.role_id===3?'violet':u.role_id===2?'blue':'teal';
-                  const rb = {4:'bg-amber-500/10 border-amber-500/20 text-amber-400',3:'bg-violet-500/10 border-violet-500/20 text-violet-400',2:'bg-blue-500/10 border-blue-500/20 text-blue-400',1:'bg-teal-500/10 border-teal-500/20 text-teal-400'};
+                  const rb = {4:'bg-amber-50 border-amber-200 text-amber-700',3:'bg-violet-50 border-violet-200 text-violet-700',2:'bg-blue-50 border-blue-200 text-blue-700',1:'bg-teal-50 border-teal-200 text-teal-700'};
                   return (
-                    <tr key={u.id} className="border-b border-white/[0.04] hover:bg-white/[0.03] transition-colors">
-                      <Td><span className="text-gray-500 text-xs font-mono">{(userPagination.page-1)*20+i+1}</span></Td>
-                      <Td><div className="flex items-center gap-2"><Avatar name={u.club_name||u.username} color={rC}/><span className="font-semibold text-white">{u.club_name||u.username}</span></div></Td>
-                      <Td><span className="text-gray-500 text-xs font-mono">{u.username}</span></Td>
+                    <tr key={u.id} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
+                      <Td><span className="text-gray-400 text-xs font-mono">{(userPagination.page-1)*20+i+1}</span></Td>
+                      <Td><div className="flex items-center gap-2"><Avatar name={u.club_name||u.username} color={rC}/><span className="font-semibold text-gray-900">{u.club_name||u.username}</span></div></Td>
+                      <Td><span className="text-gray-400 text-xs font-mono">{u.username}</span></Td>
                       <Td><span className="text-gray-500">{u.email||'—'}</span></Td>
                       <Td>
                         <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-bold rounded-full shadow-sm border ${
-                          u.role_id===4 ? 'bg-amber-500/10 border-amber-500/20 text-amber-400'
-                          : u.role_id===3 ? 'bg-violet-500/10 border-violet-500/20 text-violet-400'
-                          : u.role_id===2 ? 'bg-blue-500/10 border-blue-500/20 text-blue-400'
-                          : 'bg-teal-500/10 border-teal-500/20 text-teal-400'
+                          u.role_id===4 ? 'bg-amber-50 border-amber-200 text-amber-700'
+                          : u.role_id===3 ? 'bg-violet-50 border-violet-200 text-violet-700'
+                          : u.role_id===2 ? 'bg-blue-50 border-blue-200 text-blue-700'
+                          : 'bg-teal-50 border-teal-200 text-teal-700'
                         }`}>
                           <i className={`fas ${
                             u.role_id===4?'fa-star':u.role_id===3?'fa-shield':u.role_id===2?'fa-flag':'fa-user'
@@ -1227,16 +1210,16 @@ export default function PbDashboard() {
         : (
           <div className="overflow-x-auto">
             <table className="w-full">
-              <thead className="border-b border-white/[0.06]">
+              <thead className="border-b border-gray-100">
                 <tr>{['#','Waktu','Tipe','Deskripsi'].map(c=><Th key={c}>{c}</Th>)}</tr>
               </thead>
               <tbody>
                 {activityLog.map((log,i)=>(
-                  <tr key={log.id||i} className="border-b border-white/[0.04] hover:bg-white/[0.03] transition-colors">
-                    <Td><span className="text-gray-500 text-xs font-mono">{i+1}</span></Td>
+                  <tr key={log.id||i} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
+                    <Td><span className="text-gray-400 text-xs font-mono">{i+1}</span></Td>
                     <Td><span className="text-gray-500 text-xs whitespace-nowrap">{log.created_at?new Date(log.created_at).toLocaleString('id-ID',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}):'—'}</span></Td>
-                    <Td><span className="inline-flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-semibold rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 shadow-sm">{log.activity_type||log.action||'—'}</span></Td>
-                    <Td><span className="text-gray-400">{log.description||'—'}</span></Td>
+                    <Td><span className="inline-flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-semibold rounded-full bg-indigo-50 border border-indigo-200 text-indigo-700 shadow-sm">{log.activity_type||log.action||'—'}</span></Td>
+                    <Td><span className="text-gray-700">{log.description||'—'}</span></Td>
                   </tr>
                 ))}
               </tbody>
@@ -1289,10 +1272,6 @@ export default function PbDashboard() {
       {activeSection==='pengguna'   && renderPenggunaSection()}
       {activeSection==='log'        && renderLogSection()}
       {activeSection==='profil'     && renderProfilSection()}
-      {activeSection==='lisensi'     && <ManageLicense embedded />}
-      {activeSection==='kejurnas'    && <KejurnasManage embedded />}
-      {activeSection==='kta_config'  && <KtaConfigPage embedded />}
-      {activeSection==='daftar_ulang' && <ManageReregistration embedded />}
 
       {/* Modals */}
       <ConfirmModal show={rejectModal.show} title="Tolak Pengajuan KTA?" message="Masukkan alasan penolakan."
@@ -1303,7 +1282,7 @@ export default function PbDashboard() {
       {detailModal.show && detailModal.app && (() => {
         const a = detailModal.app;
         const rows = [
-          { label:'ID Pengajuan', value: <span className="font-mono text-xs text-gray-400">#{a.id}</span> },
+          { label:'ID Pengajuan', value: <span className="font-mono text-xs text-gray-700">#{a.id}</span> },
           { label:'Ketua / PIC',  value: a.leader_name || a.username || '—' },
           { label:'Email',        value: a.email || '—' },
           { label:'Telepon',      value: a.phone || '—' },
@@ -1318,29 +1297,29 @@ export default function PbDashboard() {
         return (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={()=>setDetailModal({show:false,app:null})}>
             <div className="absolute inset-0 bg-black/60 backdrop-blur-sm"/>
-            <div className="relative w-full max-w-md bg-[#141620] border border-white/[0.06] rounded-2xl shadow-2xl overflow-hidden" onClick={e=>e.stopPropagation()}>
+            <div className="relative w-full max-w-md bg-white border border-gray-200 rounded-2xl shadow-2xl overflow-hidden" onClick={e=>e.stopPropagation()}>
               {/* Header */}
-              <div className="flex items-center justify-between px-5 py-4 border-b border-white/[0.06]">
+              <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
                 <div className="flex items-center gap-3">
                   <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shadow-lg">
                     <i className="fas fa-info text-white text-sm"/>
                   </div>
                   <div>
-                    <h3 className="m-0 text-sm font-bold text-white leading-tight">{a.club_name}</h3>
+                    <h3 className="m-0 text-sm font-bold text-gray-900 leading-tight">{a.club_name}</h3>
                     <p className="m-0 mt-0.5 text-[11px] text-gray-500">Detail Pengajuan KTA</p>
                   </div>
                 </div>
                 <button type="button" onClick={()=>setDetailModal({show:false,app:null})}
-                  className="w-8 h-8 flex items-center justify-center rounded-xl bg-white/[0.05] text-gray-400 hover:bg-white/[0.08] hover:text-white transition-all">
+                  className="w-8 h-8 flex items-center justify-center rounded-xl bg-gray-100 text-gray-500 hover:bg-gray-200 hover:text-gray-700 transition-all">
                   <i className="fas fa-times text-xs"/>
                 </button>
               </div>
               {/* Info rows */}
               <div className="p-5 space-y-2.5">
                 {rows.map(r=>(
-                  <div key={r.label} className="flex items-start justify-between gap-3 py-2 border-b border-white/[0.06] last:border-0">
+                  <div key={r.label} className="flex items-start justify-between gap-3 py-2 border-b border-gray-100 last:border-0">
                     <span className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide whitespace-nowrap">{r.label}</span>
-                    <span className="text-sm text-gray-300 text-right">{r.value}</span>
+                    <span className="text-sm text-gray-700 text-right">{r.value}</span>
                   </div>
                 ))}
                 {/* Dokumen */}
@@ -1354,7 +1333,7 @@ export default function PbDashboard() {
                 </div>
               </div>
               {/* Footer */}
-              <div className="px-5 py-3.5 border-t border-white/[0.06] flex justify-end">
+              <div className="px-5 py-3.5 border-t border-gray-100 flex justify-end">
                 <BtnGhost sm onClick={()=>setDetailModal({show:false,app:null})}>Tutup</BtnGhost>
               </div>
             </div>

@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import Navbar from '../../components/layout/Navbar';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
@@ -5,7 +6,7 @@ import api from '../../services/api';
 import toast from 'react-hot-toast';
 import { FiBell, FiSend, FiUsers, FiActivity } from 'react-icons/fi';
 
-export default function NotificationPanel() {
+export default function NotificationPanel({ embedded }) {
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [title, setTitle] = useState('');
@@ -31,12 +32,10 @@ export default function NotificationPanel() {
     finally { setSending(false); }
   };
 
-  if (loading) return <><Navbar title="Push Notifications" /><LoadingSpinner /></>;
+  if (loading) return embedded ? <LoadingSpinner /> : <><Navbar title="Push Notifications" /><LoadingSpinner /></>;
 
-  return (
-    <div style={{ minHeight: '100vh', background: '#f1faee' }}>
-      <Navbar title="Push Notifications" />
-      <div className="page-container" style={{ maxWidth: 800, margin: '0 auto', padding: '2rem 1rem' }}>
+  const content = (
+    <div style={{ maxWidth: 800 }}>
         {stats && (
           <div className="stats-grid" style={{ marginBottom: '1.5rem' }}>
             <div className="stat-card"><div className="stat-icon" style={{ background: '#e3f2fd', color: '#1976d2' }}><FiUsers /></div><div className="stat-value">{stats.totalSubscribers || 0}</div><div className="stat-label">Subscribers</div></div>
@@ -86,7 +85,15 @@ export default function NotificationPanel() {
             </div>
           </div>
         )}
-      </div>
+    </div>
+  );
+
+  if (embedded) return content;
+
+  return (
+    <div style={{ minHeight: '100vh', background: '#f1faee' }}>
+      <Navbar title="Push Notifications" />
+      <div className="page-container" style={{ maxWidth: 800, margin: '0 auto', padding: '2rem 1rem' }}>{content}</div>
     </div>
   );
 }

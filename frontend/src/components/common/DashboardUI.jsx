@@ -20,17 +20,17 @@ const COLORS = {
 
 // Status badge configurations
 export const STATUS_CONFIG = {
-  pending:                 { label: 'Pending',           color: '#f59e0b', bg: 'bg-amber-500/10', text: 'text-amber-400', dot: 'bg-amber-400' },
-  approved_pengcab:        { label: 'Acc Pengcab',       color: '#3b82f6', bg: 'bg-blue-500/10', text: 'text-blue-400', dot: 'bg-blue-400' },
-  approved_pengda:         { label: 'Acc Pengda',        color: '#6366f1', bg: 'bg-indigo-500/10', text: 'text-indigo-400', dot: 'bg-indigo-400' },
-  approved_pb:             { label: 'Approved PB',       color: '#10b981', bg: 'bg-emerald-500/10', text: 'text-emerald-400', dot: 'bg-emerald-400' },
-  kta_issued:              { label: 'KTA Terbit',        color: '#059669', bg: 'bg-green-500/10', text: 'text-green-400', dot: 'bg-green-400' },
-  rejected_pengcab:        { label: 'Tolak Pengcab',     color: '#ef4444', bg: 'bg-red-500/10', text: 'text-red-400', dot: 'bg-red-400' },
-  rejected_pengda:         { label: 'Tolak Pengda',      color: '#ef4444', bg: 'bg-red-500/10', text: 'text-red-400', dot: 'bg-red-400' },
-  rejected_pb:             { label: 'Tolak PB',          color: '#ef4444', bg: 'bg-red-500/10', text: 'text-red-400', dot: 'bg-red-400' },
-  rejected:                { label: 'Ditolak',           color: '#ef4444', bg: 'bg-red-500/10', text: 'text-red-400', dot: 'bg-red-400' },
-  resubmit_to_pengda:      { label: 'Resubmit',          color: '#f59e0b', bg: 'bg-amber-500/10', text: 'text-amber-400', dot: 'bg-amber-400' },
-  pending_pengda_resubmit: { label: 'Re-review',         color: '#f59e0b', bg: 'bg-amber-500/10', text: 'text-amber-400', dot: 'bg-amber-400' },
+  pending:                 { label: 'Proses Pengcab',    bg: 'bg-amber-50 border border-amber-200',    text: 'text-amber-700',   dot: 'bg-amber-400'   },
+  approved_pengcab:        { label: 'Acc Pengcab',       bg: 'bg-blue-50 border border-blue-200',      text: 'text-blue-700',    dot: 'bg-blue-500'    },
+  approved_pengda:         { label: 'Acc Pengda',        bg: 'bg-indigo-50 border border-indigo-200',  text: 'text-indigo-700',  dot: 'bg-indigo-500'  },
+  approved_pb:             { label: 'Approved PB',       bg: 'bg-emerald-50 border border-emerald-200',text: 'text-emerald-700', dot: 'bg-emerald-500' },
+  kta_issued:              { label: 'KTA Terbit',        bg: 'bg-green-50 border border-green-200',    text: 'text-green-700',   dot: 'bg-green-500'   },
+  rejected_pengcab:        { label: 'Tolak Pengcab',     bg: 'bg-red-50 border border-red-200',        text: 'text-red-700',     dot: 'bg-red-500'     },
+  rejected_pengda:         { label: 'Tolak Pengda',      bg: 'bg-red-50 border border-red-200',        text: 'text-red-700',     dot: 'bg-red-500'     },
+  rejected_pb:             { label: 'Tolak PB',          bg: 'bg-red-50 border border-red-200',        text: 'text-red-700',     dot: 'bg-red-500'     },
+  rejected:                { label: 'Ditolak',           bg: 'bg-red-50 border border-red-200',        text: 'text-red-700',     dot: 'bg-red-500'     },
+  resubmit_to_pengda:      { label: 'Resubmit',          bg: 'bg-amber-50 border border-amber-200',    text: 'text-amber-700',   dot: 'bg-amber-400'   },
+  pending_pengda_resubmit: { label: 'Re-review',         bg: 'bg-amber-50 border border-amber-200',    text: 'text-amber-700',   dot: 'bg-amber-400'   },
 };
 
 // Format rupiah
@@ -38,12 +38,12 @@ export const formatRupiah = (n) => 'Rp ' + Number(n || 0).toLocaleString('id-ID'
 
 // Status Badge Component
 export const StatusBadge = ({ status, size = 'sm' }) => {
-  const config = STATUS_CONFIG[status] || { label: status, bg: 'bg-slate-500/10', text: 'text-slate-400', dot: 'bg-slate-400' };
-  const sizeClasses = size === 'sm' ? 'px-2.5 py-1 text-xs' : 'px-3 py-1.5 text-sm';
+  const config = STATUS_CONFIG[status] || { label: status, bg: 'bg-gray-100 border border-gray-200', text: 'text-gray-600', dot: 'bg-gray-400' };
+  const sizeClasses = size === 'sm' ? 'px-2.5 py-1 text-[11px]' : 'px-3.5 py-1.5 text-xs';
   
   return (
-    <span className={`inline-flex items-center gap-1.5 ${sizeClasses} rounded-full font-semibold ${config.bg} ${config.text}`}>
-      <span className={`w-1.5 h-1.5 rounded-full ${config.dot}`} />
+    <span className={`inline-flex items-center gap-1.5 ${sizeClasses} rounded-full font-semibold shadow-sm ${config.bg} ${config.text}`}>
+      <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${config.dot}`} />
       {config.label}
     </span>
   );

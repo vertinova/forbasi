@@ -2,7 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { AuthProvider } from './contexts/AuthContext';
 import ProtectedRoute from './components/common/ProtectedRoute';
-import PwaInstallPrompt from './components/common/PwaInstallPrompt';
+// import PwaInstallPrompt from './components/common/PwaInstallPrompt'; // Disabled
 
 // Auth pages
 import Login from './pages/auth/Login';
@@ -42,14 +42,12 @@ import KtaConfigPage from './pages/config/KtaConfigPage';
 import Reregistration from './pages/config/Reregistration';
 import ManageReregistration from './pages/config/ManageReregistration';
 
-import './styles/global.css';
-
 export default function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
         <Toaster position="top-right" toastOptions={{ duration: 3000 }} />
-        <PwaInstallPrompt />
+        {/* <PwaInstallPrompt /> */}
         <Routes>
           {/* Public routes */}
           <Route path="/" element={<Homepage />} />
