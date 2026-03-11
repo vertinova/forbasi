@@ -1,0 +1,549 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model activity_log {
+  id                     Int      @id @default(autoincrement())
+  user_id                Int
+  role_name              String?  @db.VarChar(50)
+  user_role              String   @db.VarChar(50)
+  self_idx               String   @db.VarChar(50)
+  activity_type          String   @db.VarChar(100)
+  description            String?  @db.Text
+  application_id         Int?
+  old_status             String?  @db.VarChar(50)
+  new_status             String?  @db.VarChar(50)
+  created_at             DateTime @default(now()) @db.Timestamp(0)
+  approved_by_pergetA_id Int?
+
+  @@index([user_id], map: "user_id")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model activity_logs {
+  id             Int      @id @default(autoincrement())
+  user_id        Int
+  role_name      String   @db.VarChar(50)
+  activity_type  String   @db.VarChar(100)
+  description    String?  @db.Text
+  application_id Int?
+  old_status     String?  @db.VarChar(50)
+  new_status     String?  @db.VarChar(50)
+  created_at     DateTime @default(now()) @db.Timestamp(0)
+
+  @@index([application_id], map: "fk_activity_log_application")
+  @@index([user_id], map: "fk_activity_log_user")
+}
+
+model admin_notifications {
+  id         Int      @id @default(autoincrement())
+  user_id    Int
+  title      String   @db.VarChar(255)
+  message    String   @db.Text
+  is_read    Boolean? @default(false)
+  created_at DateTime @default(now()) @db.Timestamp(0)
+
+  @@index([user_id], map: "idx_admin_notifications_user_id")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model admin_profiles {
+  id              Int     @id @default(autoincrement())
+  user_id         Int
+  level           String? @db.VarChar(50)
+  region          String? @db.VarChar(100)
+  phone           String? @db.VarChar(20)
+  additional_info String? @db.Text
+
+  @@index([user_id], map: "user_id")
+}
+
+model cities {
+  id          Int       @id @default(autoincrement())
+  province_id Int
+  name        String    @db.VarChar(255)
+  provinces   provinces @relation(fields: [province_id], references: [id], onDelete: Cascade, map: "fk_city_province")
+  users       users[]
+
+  @@index([province_id], map: "fk_city_province")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model competition_reregistrations {
+  id                       Int                                 @id @default(autoincrement())
+  kejurnas_registration_id Int
+  club_id                  Int?
+  user_id                  Int?
+  school_name              String?                             @db.VarChar(255)
+  school_level             String?                             @db.VarChar(50)
+  phone                    String?                             @db.VarChar(20)
+  school_permission_letter String?                             @db.VarChar(255)
+  parent_permission_letter String?                             @db.VarChar(255)
+  team_photo               String?                             @db.VarChar(255)
+  status                   competition_reregistrations_status? @default(incomplete)
+  admin_notes              String?                             @db.Text
+  submitted_at             DateTime?                           @db.Timestamp(0)
+  reviewed_at              DateTime?                           @db.Timestamp(0)
+  reviewed_by              Int?
+  created_at               DateTime?                           @default(now()) @db.Timestamp(0)
+  updated_at               DateTime?                           @default(now()) @db.Timestamp(0)
+  komandan_id              String?                             @db.VarChar(50)
+  komandan_nama            String?                             @db.VarChar(255)
+  komandan_sekolah         String?                             @db.VarChar(255)
+  komandan_photo           String?                             @db.VarChar(255)
+  manager_id               String?                             @db.VarChar(50)
+  manager_nama             String?                             @db.VarChar(255)
+  manager_sekolah          String?                             @db.VarChar(255)
+  manager_photo            String?                             @db.VarChar(255)
+  pelatih_id               String?                             @db.VarChar(50)
+  pelatih_nama             String?                             @db.VarChar(255)
+  pelatih_sekolah          String?                             @db.VarChar(255)
+  pelatih_photo            String?                             @db.VarChar(255)
+  cadangan_1_nama          String?                             @db.VarChar(255)
+  cadangan_1_photo         String?                             @db.VarChar(255)
+  cadangan_2_nama          String?                             @db.VarChar(255)
+  cadangan_2_photo         String?                             @db.VarChar(255)
+  pasukan_1_nama           String?                             @db.VarChar(255)
+  pasukan_1_photo          String?                             @db.VarChar(255)
+  pasukan_2_nama           String?                             @db.VarChar(255)
+  pasukan_2_photo          String?                             @db.VarChar(255)
+  pasukan_3_nama           String?                             @db.VarChar(255)
+  pasukan_3_photo          String?                             @db.VarChar(255)
+  pasukan_4_nama           String?                             @db.VarChar(255)
+  pasukan_4_photo          String?                             @db.VarChar(255)
+  pasukan_5_nama           String?                             @db.VarChar(255)
+  pasukan_5_photo          String?                             @db.VarChar(255)
+  pasukan_6_nama           String?                             @db.VarChar(255)
+  pasukan_6_photo          String?                             @db.VarChar(255)
+  pasukan_7_nama           String?                             @db.VarChar(255)
+  pasukan_7_photo          String?                             @db.VarChar(255)
+  pasukan_8_nama           String?                             @db.VarChar(255)
+  pasukan_8_photo          String?                             @db.VarChar(255)
+  pasukan_9_nama           String?                             @db.VarChar(255)
+  pasukan_9_photo          String?                             @db.VarChar(255)
+  pasukan_10_nama          String?                             @db.VarChar(255)
+  pasukan_10_photo         String?                             @db.VarChar(255)
+  pasukan_11_nama          String?                             @db.VarChar(255)
+  pasukan_11_photo         String?                             @db.VarChar(255)
+  pasukan_12_nama          String?                             @db.VarChar(255)
+  pasukan_12_photo         String?                             @db.VarChar(255)
+  pasukan_13_nama          String?                             @db.VarChar(255)
+  pasukan_13_photo         String?                             @db.VarChar(255)
+  pasukan_14_nama          String?                             @db.VarChar(255)
+  pasukan_14_photo         String?                             @db.VarChar(255)
+  pasukan_15_nama          String?                             @db.VarChar(255)
+  attendance_count         Int?
+  total_cost               Int?
+  payment_proof            String?                             @db.VarChar(255)
+  pasukan_15_photo         String?                             @db.VarChar(255)
+
+  @@unique([kejurnas_registration_id, club_id], map: "unique_reregistration")
+  @@index([club_id], map: "idx_club")
+  @@index([kejurnas_registration_id], map: "idx_kejurnas_reg")
+  @@index([status], map: "idx_status")
+  @@index([user_id], map: "idx_user")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model kejurnas_categories {
+  id                         Int                      @id @default(autoincrement())
+  category_name              String                   @db.VarChar(100)
+  level                      String                   @db.VarChar(50)
+  quota_jawa                 Int                      @default(0)
+  quota_luar_jawa            Int                      @default(0)
+  quota_per_pengda_jawa      Int?                     @default(5)
+  quota_per_pengda_luar_jawa Int?                     @default(3)
+  created_at                 DateTime?                @default(now()) @db.Timestamp(0)
+  kejurnas_registrations     kejurnas_registrations[]
+
+  @@unique([category_name, level], map: "unique_category")
+}
+
+model kejurnas_events {
+  id                     Int                      @id @default(autoincrement())
+  event_name             String                   @db.VarChar(255)
+  event_year             Int
+  event_date             DateTime?                @db.Date
+  location               String?                  @db.VarChar(255)
+  description            String?                  @db.Text
+  status                 kejurnas_events_status?  @default(upcoming)
+  created_at             DateTime?                @default(now()) @db.Timestamp(0)
+  updated_at             DateTime?                @default(now()) @db.Timestamp(0)
+  kejurnas_registrations kejurnas_registrations[]
+
+  @@unique([event_name, event_year], map: "unique_event")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model kejurnas_registrations {
+  id                  Int                            @id @default(autoincrement())
+  event_id            Int
+  category_id         Int
+  pengda_id           Int
+  province_id         Int
+  club_name           String                         @db.VarChar(255)
+  club_id             Int?
+  level               String                         @db.VarChar(50)
+  is_jawa             Boolean                        @default(false)
+  coach_name          String?                        @db.VarChar(255)
+  coach_phone         String?                        @db.VarChar(20)
+  manager_name        String?                        @db.VarChar(255)
+  manager_phone       String?                        @db.VarChar(20)
+  total_members       Int?
+  notes               String?                        @db.Text
+  logo_path           String?                        @db.VarChar(255)
+  status              kejurnas_registrations_status? @default(pending)
+  registered_at       DateTime?                      @default(now()) @db.Timestamp(0)
+  approved_by         Int?
+  approved_at         DateTime?                      @db.Timestamp(0)
+  approval_status     String?                        @default("pending") @db.VarChar(20)
+  approval_date       DateTime?                      @db.DateTime(0)
+  approval_notes      String?                        @db.Text
+  kejurnas_events     kejurnas_events                @relation(fields: [event_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "kejurnas_registrations_ibfk_1")
+  kejurnas_categories kejurnas_categories            @relation(fields: [category_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "kejurnas_registrations_ibfk_2")
+  users               users                          @relation(fields: [pengda_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "kejurnas_registrations_ibfk_3")
+  provinces           provinces                      @relation(fields: [province_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "kejurnas_registrations_ibfk_4")
+
+  @@index([category_id], map: "category_id")
+  @@index([event_id, category_id], map: "idx_event_category")
+  @@index([pengda_id], map: "idx_pengda")
+  @@index([status], map: "idx_status")
+  @@index([province_id], map: "province_id")
+}
+
+model kta_application_history {
+  id             Int      @id @default(autoincrement())
+  application_id Int
+  status         String   @db.VarChar(50)
+  notes          String?  @db.Text
+  created_at     DateTime @default(now()) @db.Timestamp(0)
+
+  @@index([application_id], map: "fk_history_application")
+}
+
+model kta_applications {
+  id                               Int                      @id @default(autoincrement())
+  user_id                          Int
+  club_name                        String                   @db.VarChar(255)
+  school_name                      String?                  @db.VarChar(255)
+  leader_name                      String                   @db.VarChar(255)
+  coach_name                       String                   @db.VarChar(255)
+  manager_name                     String                   @db.VarChar(255)
+  province                         String                   @db.VarChar(100)
+  regency                          String                   @db.VarChar(100)
+  club_address                     String                   @db.Text
+  province_id                      Int?
+  city_id                          Int?
+  logo_path                        String                   @db.VarChar(255)
+  ad_file_path                     String?                  @db.VarChar(255)
+  art_file_path                    String?                  @db.VarChar(255)
+  sk_file_path                     String?                  @db.VarChar(255)
+  payment_proof_path               String                   @db.VarChar(255)
+  nominal_paid                     Int?                     @default(0)
+  status                           kta_applications_status? @default(pending)
+  rejection_reason                 String?                  @db.Text
+  approved_by_pengcab_id           Int?
+  approved_at_pengcab              DateTime?                @db.Timestamp(0)
+  notes_pengcab                    String?                  @db.Text
+  rejected_by_pengcab_id           Int?
+  rejected_at_pengcab              DateTime?                @db.DateTime(0)
+  pengcab_payment_proof_path       String?                  @db.VarChar(255)
+  generated_kta_file_path          String?                  @db.VarChar(255)
+  approved_by_pengda_id            Int?
+  approved_at_pengda               DateTime?                @db.Timestamp(0)
+  notes_pengda                     String?                  @db.Text
+  rejected_by_pengda_id            Int?
+  rejected_at_pengda               DateTime?                @db.DateTime(0)
+  pengda_payment_proof_path        String?                  @db.VarChar(255)
+  generated_kta_file_path_pengda   String?                  @db.VarChar(255)
+  approved_by_pb_id                Int?
+  approved_at_pb                   DateTime?                @db.Timestamp(0)
+  notes_pb                         String?                  @db.Text
+  rejected_by_pb_id                Int?
+  rejected_at_pb                   DateTime?                @db.DateTime(0)
+  generated_kta_file_path_pb       String?                  @db.VarChar(255)
+  kta_barcode_unique_id            String?                  @db.VarChar(255)
+  kta_issued_at                    DateTime?                @db.Timestamp(0)
+  last_resubmitted_at              DateTime?                @db.DateTime(0)
+  created_at                       DateTime                 @default(now()) @db.Timestamp(0)
+  pb_to_pengda_payment_proof_path  String?                  @db.VarChar(255)
+  pb_to_pengcab_payment_proof_path String?                  @db.VarChar(255)
+  updated_at                       DateTime                 @default(now()) @db.Timestamp(0)
+  notes_pb_to_pengda               String?                  @db.Text
+  amount_pb_to_pengda              Decimal?                 @default(0.00) @db.Decimal(15, 2)
+  notes_pb_to_pengcab              String?                  @db.Text
+  amount_pb_to_pengcab             Decimal?                 @default(0.00) @db.Decimal(15, 2)
+  pb_payment_recap_id              Int?
+}
+
+model license_users {
+  id         Int                 @id @default(autoincrement())
+  username   String              @unique(map: "username") @db.VarChar(100)
+  password   String              @db.VarChar(255)
+  full_name  String?             @db.VarChar(200)
+  email      String?             @db.VarChar(150)
+  phone      String?             @db.VarChar(20)
+  role       license_users_role? @default(pelatih)
+  is_active  Boolean?            @default(true)
+  last_login DateTime?           @db.DateTime(0)
+  created_at DateTime?           @default(now()) @db.DateTime(0)
+}
+
+model notification_settings {
+  id            Int       @id @default(autoincrement())
+  setting_key   String    @unique(map: "unique_key") @db.VarChar(100)
+  setting_value String?   @db.Text
+  description   String?   @db.Text
+  updated_at    DateTime? @default(now()) @db.Timestamp(0)
+}
+
+model notification_templates {
+  id            Int                              @id @default(autoincrement())
+  template_name String                           @unique(map: "unique_name") @db.VarChar(100)
+  title         String                           @db.VarChar(255)
+  body          String                           @db.Text
+  icon          String?                          @default("forbasi/assets/icon-192x192.png") @db.VarChar(255)
+  badge         String?                          @default("forbasi/assets/icon-72x72.png") @db.VarChar(255)
+  click_action  String?                          @db.VarChar(255)
+  category      notification_templates_category? @default(general)
+  created_at    DateTime?                        @default(now()) @db.Timestamp(0)
+  updated_at    DateTime?                        @default(now()) @db.Timestamp(0)
+}
+
+model notifications {
+  id         Int       @id @default(autoincrement())
+  user_id    Int
+  title      String    @db.VarChar(255)
+  message    String    @db.Text
+  type       String?   @default("general") @db.VarChar(50)
+  is_read    Boolean?  @default(false)
+  created_at DateTime? @default(now()) @db.Timestamp(0)
+  users      users     @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "notifications_ibfk_1")
+
+  @@index([created_at], map: "idx_created_at")
+  @@index([user_id], map: "idx_user_id")
+}
+
+model notifications_log {
+  id                 Int                       @id @default(autoincrement())
+  subscription_id    Int?
+  title              String                    @db.VarChar(255)
+  body               String                    @db.Text
+  sent_at            DateTime?                 @default(now()) @db.Timestamp(0)
+  status             notifications_log_status? @default(pending)
+  error_message      String?                   @db.Text
+  clicked_at         DateTime?                 @db.Timestamp(0)
+  push_subscriptions push_subscriptions?       @relation(fields: [subscription_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "notifications_log_ibfk_1")
+
+  @@index([subscription_id], map: "subscription_id")
+}
+
+model pb_kta_configs {
+  id                   Int      @id @default(autoincrement())
+  user_id              Int      @unique(map: "user_id")
+  ketua_umum_name      String   @db.VarChar(255)
+  signature_image_path String?  @db.VarChar(255)
+  stamp_image_path     String?  @db.VarChar(255)
+  created_at           DateTime @default(now()) @db.Timestamp(0)
+  updated_at           DateTime @default(now()) @db.Timestamp(0)
+}
+
+model pb_payments_recap {
+  id                 Int                              @id @default(autoincrement())
+  recap_date         DateTime                         @db.Date
+  recipient_type     pb_payments_recap_recipient_type
+  recipient_id       Int
+  amount             Decimal                          @db.Decimal(15, 2)
+  description        String?                          @db.VarChar(255)
+  payment_proof_path String?                          @db.VarChar(255)
+  notes              String?                          @db.Text
+  paid_at            DateTime                         @db.DateTime(0)
+  processed_by_pb_id Int
+  created_at         DateTime                         @default(now()) @db.Timestamp(0)
+  updated_at         DateTime                         @default(now()) @db.Timestamp(0)
+
+  @@index([processed_by_pb_id], map: "processed_by_pb_id")
+  @@index([recipient_id], map: "recipient_id")
+}
+
+model pengcab_kta_configs {
+  id                   Int      @id @default(autoincrement())
+  user_id              Int      @unique(map: "user_id")
+  ketua_umum_name      String   @db.VarChar(255)
+  signature_image_path String?  @db.VarChar(255)
+  stamp_image_path     String?  @db.VarChar(255)
+  created_at           DateTime @default(now()) @db.Timestamp(0)
+  updated_at           DateTime @default(now()) @db.Timestamp(0)
+}
+
+model pengda_kta_configs {
+  id                   Int      @id @default(autoincrement())
+  user_id              Int      @unique(map: "user_id")
+  ketua_umum_name      String   @db.VarChar(255)
+  signature_image_path String?  @db.VarChar(255)
+  stamp_image_path     String?  @db.VarChar(255)
+  created_at           DateTime @default(now()) @db.Timestamp(0)
+  updated_at           DateTime @default(now()) @db.Timestamp(0)
+}
+
+model provinces {
+  id                     Int                      @id @default(autoincrement())
+  name                   String                   @unique(map: "name") @db.VarChar(255)
+  cities                 cities[]
+  kejurnas_registrations kejurnas_registrations[]
+  users                  users[]
+}
+
+model push_subscriptions {
+  id                   Int                           @id @default(autoincrement())
+  user_id              Int?
+  user_type            push_subscriptions_user_type? @default(guest)
+  endpoint             String                        @unique(map: "unique_endpoint", length: 255) @db.Text
+  p256dh_key           String                        @db.Text
+  auth_key             String                        @db.Text
+  user_agent           String?                       @db.Text
+  ip_address           String?                       @db.VarChar(45)
+  subscribed_at        DateTime?                     @default(now()) @db.Timestamp(0)
+  last_notification_at DateTime?                     @db.Timestamp(0)
+  is_active            Boolean?                      @default(true)
+  notifications_log    notifications_log[]
+}
+
+model roles {
+  id        Int     @id @default(autoincrement())
+  role_name String  @unique(map: "role_name") @db.VarChar(50)
+  users     users[]
+}
+
+model super_admins {
+  id         Int       @id @default(autoincrement())
+  username   String    @unique(map: "username") @db.VarChar(50)
+  password   String    @db.VarChar(255)
+  full_name  String    @db.VarChar(100)
+  email      String    @unique(map: "email") @db.VarChar(100)
+  phone      String?   @db.VarChar(20)
+  is_active  Boolean?  @default(true)
+  last_login DateTime? @db.DateTime(0)
+  created_at DateTime? @default(now()) @db.Timestamp(0)
+  updated_at DateTime? @default(now()) @db.Timestamp(0)
+
+  @@index([is_active], map: "idx_active")
+  @@index([email], map: "idx_email")
+  @@index([username], map: "idx_username")
+}
+
+model total_visitors {
+  id                    Int       @id @default(1)
+  total_visits          BigInt?   @default(0)
+  total_unique_visitors BigInt?   @default(0)
+  last_updated          DateTime? @default(now()) @db.Timestamp(0)
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model users {
+  id                     Int                      @id @default(autoincrement())
+  username               String                   @unique(map: "username") @db.VarChar(50)
+  password               String                   @db.VarChar(255)
+  reset_token            String?                  @db.VarChar(255)
+  reset_token_expires_at DateTime?                @db.DateTime(0)
+  email                  String                   @unique(map: "email") @db.VarChar(100)
+  phone                  String?                  @db.VarChar(20)
+  address                String?                  @db.Text
+  province_id            Int?
+  city_id                Int?
+  role_id                Int
+  club_name              String?                  @db.VarChar(255)
+  school_name            String?                  @db.VarChar(255)
+  created_at             DateTime                 @default(now()) @db.Timestamp(0)
+  updated_at             DateTime                 @default(now()) @db.Timestamp(0)
+  bank_account_number    String?                  @db.VarChar(225)
+  registration_fee       Decimal?                 @db.Decimal(10, 2)
+  kejurnas_registrations kejurnas_registrations[]
+  notifications          notifications[]
+  cities                 cities?                  @relation(fields: [city_id], references: [id], map: "fk_user_city")
+  provinces              provinces?               @relation(fields: [province_id], references: [id], map: "fk_user_province")
+  roles                  roles                    @relation(fields: [role_id], references: [id], onDelete: NoAction, map: "fk_user_role")
+
+  @@index([city_id], map: "fk_user_city")
+  @@index([province_id], map: "fk_user_province")
+  @@index([role_id], map: "fk_user_role")
+}
+
+model visitor_stats {
+  id              Int       @id @default(autoincrement())
+  visit_date      DateTime  @unique(map: "unique_date") @db.Date
+  visit_count     Int?      @default(0)
+  unique_visitors Int?      @default(0)
+  created_at      DateTime? @default(now()) @db.Timestamp(0)
+  updated_at      DateTime? @default(now()) @db.Timestamp(0)
+}
+
+enum pb_payments_recap_recipient_type {
+  pengda
+  pengcab
+}
+
+enum push_subscriptions_user_type {
+  guest
+  admin
+  pengda
+  pengcab
+  pb
+}
+
+enum notifications_log_status {
+  success
+  failed
+  pending
+}
+
+enum kejurnas_events_status {
+  upcoming
+  ongoing
+  completed
+  cancelled
+}
+
+enum license_users_role {
+  pelatih
+  juri
+}
+
+enum notification_templates_category {
+  kta
+  competition
+  announcement
+  membership
+  general
+}
+
+enum competition_reregistrations_status {
+  incomplete
+  submitted
+  approved
+  rejected
+}
+
+enum kejurnas_registrations_status {
+  pending
+  approved
+  rejected
+}
+
+enum kta_applications_status {
+  pending
+  approved_pengcab
+  approved_pengda
+  approved_pb
+  rejected_pengcab
+  rejected_pengda
+  rejected_pb
+  kta_issued
+  pending_pengda_resubmit
+}
