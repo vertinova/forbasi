@@ -62,7 +62,8 @@ const ROLE_LABELS = { 1: 'Anggota', 2: 'Pengcab', 3: 'Pengda', 4: 'PB' };
    DESIGN SYSTEM — Atoms (using MainLayout components)
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
 const INPUT  = 'w-full px-3.5 py-2.5 text-sm bg-white/[0.05] border border-white/[0.08] text-gray-200 placeholder-gray-500 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500/50 transition-all duration-150';
-const SELECT = 'px-3 py-2 text-sm bg-white/[0.05] border border-white/[0.08] text-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500/50 transition-all duration-150 cursor-pointer';
+const INPUT_SEL = INPUT + ' pr-8 cursor-pointer';
+const SELECT = 'pl-3 pr-8 py-2 text-sm bg-white/[0.05] border border-white/[0.08] text-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500/50 transition-all duration-150 cursor-pointer';
 
 const BtnPrimary = ({ children, onClick, disabled, type = 'button', sm, className = '' }) => (
   <button type={type} onClick={onClick} disabled={disabled}
@@ -725,7 +726,7 @@ export default function PbDashboard() {
             <div className="flex items-center gap-2 px-3 py-2 bg-white/[0.05] border border-white/[0.08] rounded-xl hover:border-emerald-500/30 focus-within:border-emerald-500/40 focus-within:ring-2 focus-within:ring-emerald-500/20 transition-all">
               <i className="fas fa-map-marker-alt text-emerald-400 text-[11px] flex-shrink-0"/>
               <select value={filterProvince} onChange={e=>setFilterProvince(e.target.value)}
-                className="text-xs bg-transparent border-none text-gray-300 focus:outline-none cursor-pointer pr-1 min-w-[110px]">
+                className="text-xs bg-transparent border-none text-gray-300 focus:outline-none cursor-pointer pr-7 min-w-[110px]">
                 <option value="">Semua Provinsi</option>
                 {provinces.map(p=><option key={p.id} value={p.id}>{p.name}</option>)}
               </select>
@@ -734,7 +735,7 @@ export default function PbDashboard() {
             <div className={`flex items-center gap-2 px-3 py-2 bg-white/[0.05] border rounded-xl transition-all ${filterProvince ? 'border-white/[0.08] hover:border-emerald-500/30 focus-within:border-emerald-500/40 focus-within:ring-2 focus-within:ring-emerald-500/20' : 'border-white/[0.04] opacity-40 pointer-events-none'}`}>
               <i className="fas fa-city text-emerald-400 text-[11px] flex-shrink-0"/>
               <select value={filterCity} onChange={e=>setFilterCity(e.target.value)} disabled={!filterProvince}
-                className="text-xs bg-transparent border-none text-gray-300 focus:outline-none cursor-pointer pr-1 min-w-[100px]">
+                className="text-xs bg-transparent border-none text-gray-300 focus:outline-none cursor-pointer pr-7 min-w-[100px]">
                 <option value="">Semua Kota</option>
                 {cities.map(c=><option key={c.id} value={c.id}>{c.name}</option>)}
               </select>
@@ -1056,14 +1057,14 @@ export default function PbDashboard() {
               <form onSubmit={handleRecapSubmit} className="space-y-4">
                 <div>
                   <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1.5">Tipe Penerima</label>
-                  <select value={recapForm.recipient_type} onChange={e=>setRecapForm(f=>({...f,recipient_type:e.target.value,recipient_user_id:''}))} className={INPUT+' cursor-pointer'}>
+                  <select value={recapForm.recipient_type} onChange={e=>setRecapForm(f=>({...f,recipient_type:e.target.value,recipient_user_id:''}))} className={INPUT_SEL}>
                     <option value="pengda">Pengda</option>
                     <option value="pengcab">Pengcab</option>
                   </select>
                 </div>
                 <div>
                   <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1.5">Penerima</label>
-                  <select value={recapForm.recipient_user_id} onChange={e=>setRecapForm(f=>({...f,recipient_user_id:e.target.value}))} className={INPUT+' cursor-pointer'}>
+                  <select value={recapForm.recipient_user_id} onChange={e=>setRecapForm(f=>({...f,recipient_user_id:e.target.value}))} className={INPUT_SEL}>
                     <option value="">— Pilih —</option>
                     {filteredRecipients.map(u=><option key={u.id} value={u.id}>{u.club_name||u.username}</option>)}
                   </select>
@@ -1071,7 +1072,7 @@ export default function PbDashboard() {
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1.5">Bulan</label>
-                    <select value={recapForm.recap_month} onChange={e=>setRecapForm(f=>({...f,recap_month:e.target.value}))} className={INPUT+' cursor-pointer'}>
+                    <select value={recapForm.recap_month} onChange={e=>setRecapForm(f=>({...f,recap_month:e.target.value}))} className={INPUT_SEL}>
                       {Array.from({length:12},(_,i)=><option key={i+1} value={i+1}>{new Date(0,i).toLocaleString('id-ID',{month:'long'})}</option>)}
                     </select>
                   </div>

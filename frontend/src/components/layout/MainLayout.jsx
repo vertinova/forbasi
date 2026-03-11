@@ -307,7 +307,7 @@ export function FilterSelect({ icon, value, onChange, children, className = '', 
         value={value}
         onChange={onChange}
         disabled={disabled}
-        className="text-xs bg-transparent border-none text-gray-300 focus:outline-none cursor-pointer pr-1 min-w-[100px]"
+        className="text-xs bg-transparent border-none text-gray-300 focus:outline-none cursor-pointer pr-7 min-w-[100px]"
       >
         {children}
       </select>

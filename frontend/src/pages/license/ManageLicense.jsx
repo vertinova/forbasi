@@ -88,7 +88,7 @@ export default function ManageLicense({ embedded }) {
           <div className="flex-1 min-w-[140px]">
             <label className="block text-[11px] font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Status</label>
             <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)}
-              className="w-full px-3 py-2 text-sm bg-white/[0.05] border border-white/[0.08] text-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500/50 transition-all cursor-pointer">
+              className="w-full pl-3 pr-8 py-2 text-sm bg-white/[0.05] border border-white/[0.08] text-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500/50 transition-all cursor-pointer">
               <option value="">Semua</option>
               <option value="pending">Pending</option>
               <option value="proses">Diproses</option>

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import api from '../../services/api';
 import toast from 'react-hot-toast';
+import KtaSubmitForm from '../kta/KtaSubmitForm';
 
 const API_BASE = (import.meta.env.VITE_API_URL || 'http://localhost:5000/api').replace(/\/api$/, '');
 
@@ -201,29 +202,23 @@ export default function AnggotaDashboard() {
         <h2 className="text-lg font-bold text-white m-0">Ajukan KTA</h2>
       </div>
 
-      <div className="bg-[#141620] rounded-2xl border border-white/[0.06] overflow-hidden">
-        <div className="p-5">
-          <div className="w-14 h-14 rounded-2xl bg-emerald-500/15 flex items-center justify-center mx-auto mb-4">
-            <i className="fas fa-file-signature text-emerald-400 text-xl" />
-          </div>
-          <p className="text-sm text-gray-400 text-center mb-5 leading-relaxed">
-            {canSubmitKta
-              ? (latest?.status === 'rejected_pengcab' ? 'Pengajuan sebelumnya ditolak Pengcab. Silakan ajukan ulang.' : isKtaExpired ? 'KTA Anda telah kedaluwarsa. Silakan perpanjang.' : 'Isi formulir pengajuan Kartu Tanda Anggota FORBASI.')
-              : `Pengajuan sedang diproses (${STATUS_MAP[latest?.status]?.label || latest?.status}).`}
-          </p>
-          {canSubmitKta ? (
-            <button
-              onClick={() => navigate('/anggota/kta/submit')}
-              className="w-full py-3.5 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white rounded-xl font-semibold text-sm transition-all border-none cursor-pointer font-[Poppins] shadow-lg shadow-emerald-500/20">
-              <i className="fas fa-plus mr-2" />{latest?.status === 'rejected_pengcab' || isKtaExpired ? 'Ajukan Ulang KTA' : 'Buat Pengajuan Baru'}
-            </button>
-          ) : (
-            <div className="bg-amber-400/10 ring-1 ring-amber-400/20 rounded-xl p-3.5 text-sm text-amber-400 text-center">
-              <i className="fas fa-hourglass-half mr-2" />Sedang diproses. Pantau di Tracking.
+      {canSubmitKta ? (
+        <KtaSubmitForm onSuccess={() => { fetchApps(); setActiveTab('kta-tracking'); }} />
+      ) : (
+        <div className="bg-[#141620] rounded-2xl border border-white/[0.06] overflow-hidden">
+          <div className="p-5 text-center">
+            <div className="w-14 h-14 rounded-2xl bg-amber-400/15 flex items-center justify-center mx-auto mb-4">
+              <i className="fas fa-hourglass-half text-amber-400 text-xl" />
             </div>
-          )}
+            <p className="text-sm text-gray-400 mb-4 leading-relaxed">
+              Pengajuan sedang diproses ({STATUS_MAP[latest?.status]?.label || latest?.status}).
+            </p>
+            <div className="bg-amber-400/10 ring-1 ring-amber-400/20 rounded-xl p-3.5 text-sm text-amber-400">
+              <i className="fas fa-info-circle mr-2" />Pantau progress di tab Tracking.
+            </div>
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Rejection reasons */}
       {latest?.status === 'rejected_pengcab' && (
