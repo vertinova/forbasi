@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import SidebarLayout from '../../components/layout/SidebarLayout';
+import CustomSelect from '../../components/common/CustomSelect';
+import KtaDetailPanel from '../../components/common/KtaDetailPanel';
+import DocumentPreviewModal from '../../components/common/DocumentPreviewModal';
 import api from '../../services/api';
 import toast from 'react-hot-toast';
 import ConfirmModal from '../../components/common/ConfirmModal';
@@ -46,6 +48,8 @@ export default function PengcabDashboard() {
   const [filterStatus, setFilterStatus] = useState('');
   const [confirm, setConfirm] = useState({ show: false, id: null, status: '', title: '', message: '' });
   const [confirmReason, setConfirmReason] = useState('');
+  const [selectedAppId, setSelectedAppId] = useState(null);
+  const [docPreview, setDocPreview] = useState({ show: false, url: '', title: '' });
 
   // Members state
   const [members, setMembers] = useState([]);
@@ -168,15 +172,20 @@ export default function PengcabDashboard() {
         <form onSubmit={handleFilter} className="flex flex-wrap gap-3 items-end">
           <div className="flex-1 min-w-36">
             <label className="block text-[11px] font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Status</label>
-            <select className={SEL} value={filterStatus} onChange={e => setFilterStatus(e.target.value)}>
-              <option value="">Semua</option>
-              <option value="pending">Pending</option>
-              <option value="approved_pengcab">Approved Pengcab</option>
-              <option value="rejected_pengcab">Ditolak Pengcab</option>
-              <option value="rejected_pengda">Ditolak Pengda</option>
-              <option value="rejected_pb">Ditolak PB</option>
-              <option value="resubmit_to_pengda">Diajukan Ulang ke Pengda</option>
-            </select>
+            <CustomSelect
+              value={filterStatus}
+              onChange={v=>setFilterStatus(v)}
+              options={[
+                {value:'',label:'Semua'},
+                {value:'pending',label:'Pending'},
+                {value:'approved_pengcab',label:'Approved Pengcab'},
+                {value:'rejected_pengcab',label:'Ditolak Pengcab'},
+                {value:'rejected_pengda',label:'Ditolak Pengda'},
+                {value:'rejected_pb',label:'Ditolak PB'},
+                {value:'resubmit_to_pengda',label:'Diajukan Ulang ke Pengda'},
+              ]}
+              placeholder="Semua"
+            />
           </div>
           <div className="flex-1 min-w-36">
             <label className="block text-[11px] font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Cari Klub</label>
@@ -240,11 +249,11 @@ export default function PengcabDashboard() {
                     <td className="px-4 py-3">{badge(app.status)}</td>
                     <td className="px-4 py-3">
                       <div className="flex gap-1.5 flex-wrap">
-                        <Link to={`/pengcab/kta/${app.id}`}
-                          className="w-8 h-8 flex items-center justify-center bg-blue-500/10 text-blue-400 hover:bg-blue-500/20 rounded-lg transition-colors text-xs"
+                        <button onClick={() => { setSelectedAppId(app.id); setActiveTab('kta-detail'); }}
+                          className="w-8 h-8 flex items-center justify-center bg-blue-500/10 text-blue-400 hover:bg-blue-500/20 rounded-lg border-none cursor-pointer transition-colors text-xs"
                           title="Detail">
                           <i className="fas fa-eye" />
-                        </Link>
+                        </button>
                         {(app.status === 'pending' || app.status === 'rejected_pengcab') && (
                           <>
                             <button
@@ -296,12 +305,17 @@ export default function PengcabDashboard() {
         <div className="flex flex-wrap gap-3 items-end">
           <div className="flex-1 min-w-36">
             <label className="block text-[11px] font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Status KTA</label>
-            <select className={SEL} value={memberKtaFilter} onChange={e => setMemberKtaFilter(e.target.value)}>
-              <option value="all">Semua Status</option>
-              <option value="issued">KTA Terbit</option>
-              <option value="not_issued">Belum Diterbitkan</option>
-              <option value="not_applied">Belum Mengajukan</option>
-            </select>
+            <CustomSelect
+              value={memberKtaFilter}
+              onChange={v=>setMemberKtaFilter(v)}
+              options={[
+                {value:'all',label:'Semua Status'},
+                {value:'issued',label:'KTA Terbit'},
+                {value:'not_issued',label:'Belum Diterbitkan'},
+                {value:'not_applied',label:'Belum Mengajukan'},
+              ]}
+              placeholder="Semua Status"
+            />
           </div>
           <div className="flex-1 min-w-36">
             <label className="block text-[11px] font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Cari</label>
@@ -438,10 +452,10 @@ export default function PengcabDashboard() {
                       <td className="px-4 py-3">{badge(k.status)}</td>
                       <td className="px-4 py-3">
                         {k.generated_kta_file_path_pb && (
-                          <a href={`${API_BASE}/uploads/${k.generated_kta_file_path_pb}`} target="_blank" rel="noopener noreferrer"
-                            className="inline-flex items-center gap-1.5 text-xs text-emerald-400 hover:text-emerald-300 font-medium">
-                            <i className="fas fa-file-pdf text-[10px]" />Download
-                          </a>
+                          <button type="button" onClick={() => setDocPreview({ show: true, url: `${API_BASE}/uploads/${k.generated_kta_file_path_pb}`, title: 'KTA PDF' })}
+                            className="inline-flex items-center gap-1.5 text-xs text-emerald-400 hover:text-emerald-300 font-medium cursor-pointer bg-transparent border-none">
+                            <i className="fas fa-file-pdf text-[10px]" />Lihat
+                          </button>
                         )}
                       </td>
                     </tr>
@@ -542,10 +556,10 @@ export default function PengcabDashboard() {
                       <td className="px-4 py-3 text-gray-500">{t.notes || '-'}</td>
                       <td className="px-4 py-3">
                         {t.payment_proof_path && (
-                          <a href={`${API_BASE}/uploads/${t.payment_proof_path}`} target="_blank" rel="noopener noreferrer"
-                            className="inline-flex items-center gap-1.5 text-xs text-emerald-400 hover:text-emerald-300 font-medium">
+                          <button type="button" onClick={() => setDocPreview({ show: true, url: `${API_BASE}/uploads/${t.payment_proof_path}`, title: 'Bukti Pembayaran' })}
+                            className="inline-flex items-center gap-1.5 text-xs text-emerald-400 hover:text-emerald-300 font-medium cursor-pointer bg-transparent border-none">
                             <i className="fas fa-image text-[10px]" />Lihat
-                          </a>
+                          </button>
                         )}
                       </td>
                     </tr>
@@ -606,6 +620,13 @@ export default function PengcabDashboard() {
 
       {/* Tab Content */}
       {activeTab === 'kta' && renderKtaSection()}
+      {activeTab === 'kta-detail' && selectedAppId && (
+        <KtaDetailPanel
+          appId={selectedAppId}
+          onBack={() => { setActiveTab('kta'); setSelectedAppId(null); }}
+          onStatusUpdated={fetchData}
+        />
+      )}
       {activeTab === 'members' && renderMembersSection()}
       {activeTab === 'issued' && renderIssuedKtaSection()}
       {activeTab === 'balance' && renderBalanceSection()}
@@ -621,6 +642,7 @@ export default function PengcabDashboard() {
         onReasonChange={setConfirmReason}
         reasonLabel={confirm.status === 'rejected_pengcab' ? 'Alasan Penolakan *' : 'Catatan (opsional)'}
       />
+      <DocumentPreviewModal show={docPreview.show} url={docPreview.url} title={docPreview.title} onClose={() => setDocPreview({ show: false, url: '', title: '' })} />
     </SidebarLayout>
   );
 }

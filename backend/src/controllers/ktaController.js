@@ -3,6 +3,7 @@ const User = require('../models/User');
 const { ActivityLog } = require('../models/Common');
 const KtaConfig = require('../models/KtaConfig');
 const path = require('path');
+const fs = require('fs');
 
 const getRoleName = (roleId) => {
   const roles = { 1: 'anggota', 2: 'pengcab', 3: 'pengda', 4: 'pb' };
@@ -16,7 +17,15 @@ exports.submitApplication = async (req, res) => {
     const user = await User.findById(userId);
     const db = require('../lib/db-compat');
 
-    const { coach_name, manager_name, school_name, leader_name, club_address, nominal_paid } = req.body;
+    const { coach_name, manager_name, school_name, leader_name, club_address, nominal_paid, phone } = req.body;
+
+    if (club_address && club_address.length > 45) {
+      return res.status(400).json({ success: false, message: 'Alamat sekretariat tidak boleh lebih dari 45 karakter.' });
+    }
+    if (phone && !/^[0-9]+$/.test(phone)) {
+      return res.status(400).json({ success: false, message: 'No. HP hanya boleh berisi angka.' });
+    }
+
     const files = req.files || {};
 
     // Resolve province and regency text names from IDs
@@ -145,7 +154,8 @@ exports.submitApplication = async (req, res) => {
     });
   } catch (err) {
     console.error('Submit KTA error:', err);
-    return res.status(500).json({ success: false, message: 'Terjadi kesalahan server' });
+    const message = err.message || 'Terjadi kesalahan server';
+    return res.status(500).json({ success: false, message: `Gagal mengirim pengajuan: ${message}` });
   }
 };
 
@@ -236,7 +246,7 @@ exports.updateStatus = async (req, res) => {
 
     const validTransitions = {
       2: {
-        from: ['pending', 'rejected_pengda', 'rejected_pb'],
+        from: ['pending', 'rejected_pengcab', 'rejected_pengda', 'rejected_pb'],
         to: ['approved_pengcab', 'rejected_pengcab', 'resubmit_to_pengda']
       },
       3: {
@@ -244,7 +254,7 @@ exports.updateStatus = async (req, res) => {
         to: ['approved_pengda', 'rejected_pengda', 'pending_pengda_resubmit']
       },
       4: {
-        from: ['approved_pengda', 'pending_pengda_resubmit', 'rejected_pb'],
+        from: ['approved_pengda', 'pending_pengda_resubmit', 'rejected_pb', 'approved_pb'],
         to: ['approved_pb', 'kta_issued', 'rejected_pb']
       }
     };
@@ -561,19 +571,44 @@ exports.generateKtaPdf = async (req, res) => {
   }
 };
 
-// Download KTA PDF
+// Download KTA PDF (auto-regenerate if missing)
 exports.downloadKtaPdf = async (req, res) => {
   try {
     const { id } = req.params;
+    const db = require('../lib/db-compat');
     const app = await KtaApplication.findById(parseInt(id));
-    if (!app || !app.generated_kta_file_path_pb) {
-      return res.status(404).json({ success: false, message: 'File KTA tidak ditemukan' });
+    if (!app) {
+      return res.status(404).json({ success: false, message: 'Pengajuan tidak ditemukan' });
+    }
+    if (!['approved_pb', 'kta_issued'].includes(app.status)) {
+      return res.status(404).json({ success: false, message: 'KTA belum disetujui PB' });
     }
 
-    const filePath = path.join(__dirname, '../../uploads', app.generated_kta_file_path_pb);
-    const fs = require('fs');
-    if (!fs.existsSync(filePath)) {
-      return res.status(404).json({ success: false, message: 'File KTA tidak ditemukan di server' });
+    let filePath = app.generated_kta_file_path_pb
+      ? path.join(__dirname, '../../uploads', app.generated_kta_file_path_pb)
+      : null;
+
+    // Auto-regenerate if file missing on disk
+    if (!filePath || !fs.existsSync(filePath)) {
+      const { generateKtaPdf } = require('../utils/pdfGenerator');
+      const [rows] = await db.query(
+        `SELECT ka.*, u.club_name, u.username, p.name as province_name, c.name as city_name
+         FROM kta_applications ka
+         JOIN users u ON ka.user_id = u.id
+         LEFT JOIN provinces p ON ka.province_id = p.id
+         LEFT JOIN cities c ON ka.city_id = c.id
+         WHERE ka.id = ?`,
+        [parseInt(id)]
+      );
+      if (!rows.length) {
+        return res.status(404).json({ success: false, message: 'Data pengajuan tidak ditemukan' });
+      }
+      const result = await generateKtaPdf(rows[0], { role: 'pb' });
+      await KtaApplication.update(parseInt(id), { generated_kta_file_path_pb: result.filepath });
+      if (result.barcode_id) {
+        await KtaApplication.update(parseInt(id), { kta_barcode_unique_id: result.barcode_id });
+      }
+      filePath = path.join(__dirname, '../../uploads', result.filepath);
     }
 
     res.download(filePath, `KTA_${app.club_name || app.id}.pdf`);
@@ -596,6 +631,113 @@ exports.batchRegenerateKta = async (req, res) => {
   } catch (err) {
     console.error('Batch regenerate error:', err);
     return res.status(500).json({ success: false, message: 'Gagal regenerasi KTA batch' });
+  }
+};
+
+// Regenerate all 3 role KTA PDFs for a single application (PB only)
+exports.regenerateAllPdfs = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const dbPool = require('../lib/db-compat');
+    const { generateKtaPdf } = require('../utils/pdfGenerator');
+
+    const [rows] = await dbPool.query(
+      `SELECT ka.*, u.club_name, u.username, p.name as province_name, c.name as city_name
+       FROM kta_applications ka
+       JOIN users u ON ka.user_id = u.id
+       LEFT JOIN provinces p ON ka.province_id = p.id
+       LEFT JOIN cities c ON ka.city_id = c.id
+       WHERE ka.id = ?`,
+      [parseInt(id)]
+    );
+    if (!rows.length) {
+      return res.status(404).json({ success: false, message: 'Pengajuan tidak ditemukan' });
+    }
+
+    const app = rows[0];
+    if (!['approved_pb', 'kta_issued'].includes(app.status)) {
+      return res.status(400).json({ success: false, message: 'KTA belum disetujui PB' });
+    }
+
+    const results = {};
+    const updateData = {};
+
+    // Regenerate pengcab PDF if pengcab approved
+    if (app.approved_by_pengcab_id) {
+      const r = await generateKtaPdf(app, { role: 'pengcab', adminId: app.approved_by_pengcab_id });
+      updateData.generated_kta_file_path = r.filepath;
+      results.pengcab = r.filepath;
+    }
+
+    // Regenerate pengda PDF if pengda approved
+    if (app.approved_by_pengda_id) {
+      const r = await generateKtaPdf(app, { role: 'pengda', adminId: app.approved_by_pengda_id });
+      updateData.generated_kta_file_path_pengda = r.filepath;
+      results.pengda = r.filepath;
+    }
+
+    // Regenerate pb PDF
+    if (app.approved_by_pb_id) {
+      const r = await generateKtaPdf(app, { role: 'pb', adminId: app.approved_by_pb_id });
+      updateData.generated_kta_file_path_pb = r.filepath;
+      if (r.barcode_id) updateData.kta_barcode_unique_id = r.barcode_id;
+      results.pb = r.filepath;
+    }
+
+    if (Object.keys(updateData).length > 0) {
+      await KtaApplication.update(parseInt(id), updateData);
+    }
+
+    return res.json({
+      success: true,
+      message: 'Semua KTA PDF berhasil di-generate ulang',
+      data: results
+    });
+  } catch (err) {
+    console.error('Regenerate all PDFs error:', err);
+    return res.status(500).json({ success: false, message: 'Gagal generate ulang KTA PDF' });
+  }
+};
+
+exports.deleteApplication = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const app = await KtaApplication.findById(parseInt(id));
+    if (!app) {
+      return res.status(404).json({ success: false, message: 'Pengajuan KTA tidak ditemukan' });
+    }
+
+    const UPLOADS = path.join(__dirname, '../../uploads');
+    const fileFields = [
+      'logo_path', 'ad_file_path', 'art_file_path', 'sk_file_path',
+      'payment_proof_path', 'generated_kta_file_path',
+      'generated_kta_file_path_pengda', 'generated_kta_file_path_pb',
+      'pengcab_payment_proof_path', 'pengda_payment_proof_path'
+    ];
+    for (const field of fileFields) {
+      if (app[field]) {
+        const filePath = path.join(UPLOADS, app[field]);
+        if (fs.existsSync(filePath)) {
+          try { fs.unlinkSync(filePath); } catch {}
+        }
+      }
+    }
+
+    const db = require('../lib/db-compat');
+    await db.query('DELETE FROM kta_applications WHERE id = ?', [parseInt(id)]);
+
+    await ActivityLog.create({
+      user_id: req.user.id,
+      role_name: getRoleName(req.user.role_id),
+      activity_type: 'delete_kta',
+      description: `Menghapus pengajuan KTA #${id} (${app.club_name || ''})`,
+      application_id: parseInt(id),
+    });
+
+    return res.json({ success: true, message: 'Pengajuan KTA berhasil dihapus' });
+  } catch (err) {
+    console.error('Delete KTA error:', err);
+    return res.status(500).json({ success: false, message: 'Gagal menghapus pengajuan KTA' });
   }
 };
 

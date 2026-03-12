@@ -45,14 +45,14 @@ export default function SidebarLayout({ menuItems, title, subtitle, children }) 
       <aside
         id="sidebar"
         className={`
-          fixed top-0 left-0 h-full z-50 overflow-y-auto overflow-x-hidden transition-all duration-300 flex flex-col
+          fixed top-0 left-0 h-full z-50 overflow-x-hidden transition-all duration-300 flex flex-col
           bg-[#0f1119] border-r border-white/[0.06]
           ${mobileOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
         `}
         style={{ width: sidebarW }}
       >
         {/* Brand */}
-        <div className={`px-4 pt-5 pb-3 ${collapsed ? 'flex justify-center' : ''}`}>
+        <div className={`px-4 pt-4 pb-2 flex-shrink-0 ${collapsed ? 'flex justify-center' : ''}`}>
           <div className={`flex items-center ${collapsed ? 'justify-center' : 'gap-3 px-1'}`}>
             <div className="w-10 h-10 rounded-xl bg-white/[0.06] border border-white/[0.08] flex items-center justify-center flex-shrink-0 overflow-hidden p-1">
               <img src={logoForbasi} alt="FORBASI" className="w-full h-full object-contain" />
@@ -60,19 +60,19 @@ export default function SidebarLayout({ menuItems, title, subtitle, children }) 
             {!collapsed && (
               <div className="min-w-0">
                 <span className="block font-extrabold text-white text-sm leading-tight tracking-tight">FORBASI</span>
-                <span className="block text-[10px] text-emerald-400 font-semibold tracking-wider uppercase">Admin Panel</span>
+                <span className="block text-[10px] text-emerald-400 font-semibold tracking-wider uppercase">{subtitle || 'Admin Panel'}</span>
               </div>
             )}
           </div>
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1 px-3 pb-2">
-          <ul className="space-y-0.5 list-none p-0 m-0">
+        <nav className="flex-1 px-3 pb-1 overflow-y-auto overflow-x-hidden min-h-0">
+          <ul className="space-y-px list-none p-0 m-0">
             {menuItems.map((item, idx) => {
               if (item.divider) {
                 return (
-                  <li key={`div-${idx}`} className="pt-4 pb-1.5">
+                  <li key={`div-${idx}`} className="pt-3 pb-1">
                     {!collapsed && item.dividerLabel
                       ? <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest px-3 m-0">{item.dividerLabel}</p>
                       : <div className="border-t border-white/[0.06] mx-2" />}
@@ -85,7 +85,7 @@ export default function SidebarLayout({ menuItems, title, subtitle, children }) 
                 : (item.to && (location.pathname === item.to || (item.to !== '/' && location.pathname.startsWith(item.to))));
 
               const baseClasses = `
-                group flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] font-medium transition-all duration-200 no-underline relative
+                group flex items-center gap-3 px-3 py-2 rounded-xl text-[13px] font-medium transition-all duration-200 no-underline relative
                 ${collapsed ? 'justify-center' : ''}
               `;
 
@@ -137,10 +137,10 @@ export default function SidebarLayout({ menuItems, title, subtitle, children }) 
         </nav>
 
         {/* Logout */}
-        <div className="p-3 border-t border-white/[0.06]">
+        <div className="p-2 border-t border-white/[0.06] flex-shrink-0">
           <button onClick={handleLogout}
             className={`
-              group flex items-center gap-3 w-full px-3 py-2.5 rounded-xl text-[13px] font-medium
+              group flex items-center gap-3 w-full px-3 py-2 rounded-xl text-[13px] font-medium
               text-gray-500 hover:text-red-400 hover:bg-red-500/10 transition-all duration-200
               border-none bg-transparent cursor-pointer
               ${collapsed ? 'justify-center' : ''}

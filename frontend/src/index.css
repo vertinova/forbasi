@@ -55,3 +55,48 @@ select option {
   color: #e5e7eb;
   padding: 8px 12px;
 }
+
+/* ── Custom scrollbar ── */
+.custom-scroll::-webkit-scrollbar {
+  width: 4px;
+}
+.custom-scroll::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 9999px;
+  margin: 4px 0;
+}
+.custom-scroll::-webkit-scrollbar-thumb {
+  background: rgba(16, 185, 129, 0.25);
+  border-radius: 9999px;
+  transition: background 0.2s;
+}
+.custom-scroll::-webkit-scrollbar-thumb:hover {
+  background: rgba(16, 185, 129, 0.45);
+}
+.custom-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(16, 185, 129, 0.25) transparent;
+}
+
+/* Sidebar thin scrollbar - only visible on hover */
+#sidebar nav::-webkit-scrollbar {
+  width: 3px;
+}
+#sidebar nav::-webkit-scrollbar-track {
+  background: transparent;
+}
+#sidebar nav::-webkit-scrollbar-thumb {
+  background: transparent;
+  border-radius: 9999px;
+  transition: background 0.3s;
+}
+#sidebar:hover nav::-webkit-scrollbar-thumb {
+  background: rgba(16, 185, 129, 0.2);
+}
+#sidebar nav {
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+}
+#sidebar:hover nav {
+  scrollbar-color: rgba(16, 185, 129, 0.2) transparent;
+}

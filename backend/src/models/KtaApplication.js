@@ -178,7 +178,9 @@ const KtaApplication = {
         SUM(CASE WHEN ka.status = 'rejected_pengcab' THEN 1 ELSE 0 END) as rejected_pengcab,
         SUM(CASE WHEN ka.status = 'rejected_pengda' THEN 1 ELSE 0 END) as rejected_pengda,
         SUM(CASE WHEN ka.status = 'rejected_pb' THEN 1 ELSE 0 END) as rejected_pb,
-        SUM(CASE WHEN ka.status IN ('resubmit_to_pengda','pending_pengda_resubmit') THEN 1 ELSE 0 END) as resubmitting
+        SUM(CASE WHEN ka.status IN ('resubmit_to_pengda','pending_pengda_resubmit') THEN 1 ELSE 0 END) as resubmitting,
+        SUM(CASE WHEN ka.status IN ('approved_pengda','pending_pengda_resubmit') THEN 1 ELSE 0 END) as needs_pb_action,
+        SUM(CASE WHEN ka.status IN ('pending','approved_pengcab') THEN 1 ELSE 0 END) as pending_awal
       FROM kta_applications ka
       WHERE ${conds.join(' AND ')}
     `;

@@ -22,45 +22,84 @@ function useCountUp(target, trigger) {
 }
 
 /* ─── Intersection observer hook ────────────────────────── */
-function useInView(ref) {
+function useInView(ref, threshold = 0.15) {
   const [inView, setInView] = useState(false);
   useEffect(() => {
     if (!ref.current) return;
-    const obs = new IntersectionObserver(([e]) => { if (e.isIntersecting) setInView(true); }, { threshold: 0.2 });
+    const obs = new IntersectionObserver(([e]) => { if (e.isIntersecting) setInView(true); }, { threshold });
     obs.observe(ref.current);
     return () => obs.disconnect();
-  }, [ref]);
+  }, [ref, threshold]);
   return inView;
 }
 
 /* ─── Constants ─────────────────────────────────────────── */
-const MEMBERS_PER_PAGE = 4;
-const TEAMS_PER_PAGE = 12;
+const MEMBERS_PER_PAGE = 8;
 
-const PROGRAMS = [
-  { icon: 'https://cdn-icons-png.flaticon.com/512/3050/3050541.png', title: 'Komite Kompetisi', desc: 'Menyelenggarakan berbagai kompetisi baris-berbaris dari tingkat daerah hingga nasional untuk mengembangkan bakat dan prestasi.' },
-  { icon: 'https://cdn-icons-png.flaticon.com/512/1570/1570887.png', title: 'Komite Keanggotaan', desc: 'Mengelola keanggotaan FORBASI di seluruh Indonesia dan membangun jaringan antar anggota.' },
-  { icon: 'https://cdn-icons-png.flaticon.com/512/2936/2936886.png', title: 'Komite Kepelatihan', desc: 'Menyelenggarakan pelatihan dan pembinaan untuk meningkatkan kualitas pelatih baris-berbaris.' },
-  { icon: 'https://cdn-icons-png.flaticon.com/512/3176/3176272.png', title: 'Sertifikasi Juri & Pelatih', desc: 'Melaksanakan program sertifikasi untuk menjamin kualitas juri dan pelatih baris-berbaris.' },
-  { icon: 'https://cdn-icons-png.flaticon.com/512/1077/1077114.png', title: 'Daftar Anggota', desc: 'Lihat daftar lengkap anggota FORBASI dari seluruh Indonesia dan bergabung dengan komunitas kami.' },
-  { icon: 'https://cdn-icons-png.flaticon.com/512/2989/2989988.png', title: 'Semua Program', desc: 'Temukan lebih banyak program menarik dari FORBASI untuk pengembangan baris-berbaris di Indonesia.', highlight: true },
+const NAV_ITEMS = [
+  ['hero', 'Beranda', 'fa-home'],
+  ['about', 'Tentang', 'fa-info-circle'],
+  ['struktur', 'Organisasi', 'fa-sitemap'],
+  ['katalog', 'Katalog', 'fa-id-badge'],
+  ['members', 'Anggota', 'fa-users'],
+  ['berita', 'Berita', 'fa-newspaper'],
+  ['marketplace', 'Marketplace', 'fa-store'],
+];
+
+const STRUKTUR_DATA = [
+  { jabatan: 'Ketua Umum', nama: '-', icon: 'fa-crown' },
+  { jabatan: 'Sekretaris Jenderal', nama: '-', icon: 'fa-pen-fancy' },
+  { jabatan: 'Bendahara Umum', nama: '-', icon: 'fa-coins' },
+  { jabatan: 'Ketua Bidang Kompetisi', nama: '-', icon: 'fa-trophy' },
+  { jabatan: 'Ketua Bidang Keanggotaan', nama: '-', icon: 'fa-users' },
+  { jabatan: 'Ketua Bidang Kepelatihan', nama: '-', icon: 'fa-chalkboard-teacher' },
+];
+
+const KATALOG_JURI = [
+  { level: 'Juri Muda (C)', syarat: ['Minimal usia 20 tahun', 'Mengikuti diklat juri muda', 'Lulus ujian teori & praktek'], warna: 'emerald' },
+  { level: 'Juri Madya (B)', syarat: ['Memiliki lisensi Juri Muda', 'Pengalaman menilai min. 5 event', 'Mengikuti diklat juri madya'], warna: 'blue' },
+  { level: 'Juri Utama (A)', syarat: ['Memiliki lisensi Juri Madya', 'Pengalaman menilai min. 10 event', 'Rekomendasi PB FORBASI'], warna: 'amber' },
+];
+
+const KATALOG_PELATIH = [
+  { level: 'Pelatih C', syarat: ['Minimal usia 18 tahun', 'Mengikuti diklat pelatih dasar', 'Lulus ujian teori & praktek'], warna: 'emerald' },
+  { level: 'Pelatih B', syarat: ['Memiliki lisensi Pelatih C', 'Pengalaman melatih min. 3 tahun', 'Membina min. 1 klub aktif'], warna: 'blue' },
+  { level: 'Pelatih A', syarat: ['Memiliki lisensi Pelatih B', 'Pengalaman melatih min. 5 tahun', 'Prestasi di tingkat nasional'], warna: 'amber' },
+];
+
+const BERITA_PLACEHOLDER = [
+  { id: 1, judul: 'Kejurnas FORBASI 2026 Segera Digelar', ringkasan: 'Kompetisi baris-berbaris tingkat nasional akan diselenggarakan di Semarang, Jawa Tengah pada April 2026.', tanggal: '10 Mar 2026', kategori: 'Kompetisi', icon: 'fa-trophy' },
+  { id: 2, judul: 'Pendaftaran Lisensi Pelatih & Juri Dibuka', ringkasan: 'PB FORBASI membuka pendaftaran lisensi pelatih dan juri untuk periode 2026. Daftar sekarang!', tanggal: '5 Mar 2026', kategori: 'Lisensi', icon: 'fa-certificate' },
+  { id: 3, judul: 'Rakor Pengda Se-Indonesia', ringkasan: 'Rapat koordinasi seluruh Pengda FORBASI untuk membahas program kerja tahun 2026.', tanggal: '28 Feb 2026', kategori: 'Organisasi', icon: 'fa-handshake' },
+  { id: 4, judul: 'Workshop Perjurian Nasional', ringkasan: 'Workshop peningkatan kompetensi juri baris-berbaris diselenggarakan secara hybrid.', tanggal: '20 Feb 2026', kategori: 'Pelatihan', icon: 'fa-graduation-cap' },
+];
+
+const MARKETPLACE_ITEMS = [
+  { nama: 'Kemeja Resmi FORBASI', harga: 'Rp 150.000', icon: 'fa-shirt', warna: 'from-emerald-500 to-teal-600' },
+  { nama: 'Jersey Latihan FORBASI', harga: 'Rp 170.000', icon: 'fa-vest-patches', warna: 'from-blue-500 to-indigo-600' },
+  { nama: 'Topi Official FORBASI', harga: 'Rp 75.000', icon: 'fa-hat-cowboy', warna: 'from-amber-500 to-orange-600' },
+  { nama: 'Jaket Bomber FORBASI', harga: 'Rp 250.000', icon: 'fa-jacket', warna: 'from-violet-500 to-purple-600' },
 ];
 
 /* ═══════════════════════════════════════════════════════════
    Main Component
 ════════════════════════════════════════════════════════════ */
 export default function Homepage() {
-  /* ── navbar scroll effect ── */
   const [scrolled, setScrolled] = useState(false);
+  const [mobileNav, setMobileNav] = useState(false);
+
   useEffect(() => {
     const fn = () => setScrolled(window.scrollY > 50);
     window.addEventListener('scroll', fn);
     return () => window.removeEventListener('scroll', fn);
   }, []);
 
-  const scrollTo = (id) => document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' });
+  const scrollTo = (id) => {
+    setMobileNav(false);
+    document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' });
+  };
 
-  /* ── members ── */
+  /* ── Data: members ── */
   const [allClubs, setAllClubs] = useState([]);
   const [memberSearch, setMemberSearch] = useState('');
   const [memberPage, setMemberPage] = useState(1);
@@ -69,27 +108,17 @@ export default function Homepage() {
   const membersInView = useInView(membersRef);
   const memberCountAnim = useCountUp(totalMembers, membersInView);
 
-  /* ── competition teams ── */
-  const [teams, setTeams] = useState([]);
-  const [teamsAll, setTeamsAll] = useState([]);
-  const [categories, setCategories] = useState([]);
-  const [teamSearch, setTeamSearch] = useState('');
-  const [teamCategory, setTeamCategory] = useState('all');
-  const [teamLevel, setTeamLevel] = useState('all');
-  const [teamPage, setTeamPage] = useState(1);
-  const [teamsLoading, setTeamsLoading] = useState(true);
-  const compRef = useRef(null);
-  const compInView = useInView(compRef);
-  const totalTeamsAnim = useCountUp(teamsAll.length, compInView);
-
-  /* ── visitor stats ── */
+  /* ── Data: visitors ── */
   const [visitors, setVisitors] = useState(null);
-  const footerRef = useRef(null);
-  const footerInView = useInView(footerRef);
-  const visitorAnim = useCountUp(visitors?.totals?.total_visits || 0, footerInView);
-  const uniqueAnim  = useCountUp(visitors?.totals?.total_unique_visitors || 0, footerInView);
+  const statsRef = useRef(null);
+  const statsInView = useInView(statsRef);
+  const visitorAnim = useCountUp(visitors?.totals?.total_visits || 0, statsInView);
+  const uniqueAnim = useCountUp(visitors?.totals?.total_unique_visitors || 0, statsInView);
 
-  /* ── boot ── */
+  /* ── Katalog tab ── */
+  const [katalogTab, setKatalogTab] = useState('juri');
+
+  /* ── Boot ── */
   useEffect(() => {
     (async () => {
       try { await api.post('/config/track-visitor'); } catch {}
@@ -99,321 +128,312 @@ export default function Homepage() {
         setTotalMembers(r.data.data?.total || 0);
       } catch {}
       try {
-        const r = await api.get('/public/approved-teams', { params: { limit: 500 } });
-        setTeamsAll(r.data.data?.teams || []);
-        setCategories(r.data.data?.categories || []);
-      } catch {}
-      try {
         const r = await api.get('/public/visitor-stats');
         setVisitors(r.data.data);
       } catch {}
-      setTeamsLoading(false);
     })();
   }, []);
 
-  /* ── member filtering + pagination ── */
+  /* ── Member filtering ── */
   const filteredClubs = allClubs.filter(c =>
     !memberSearch ||
     c.club_name?.toLowerCase().includes(memberSearch.toLowerCase()) ||
     c.coach_name?.toLowerCase().includes(memberSearch.toLowerCase()) ||
-    c.manager_name?.toLowerCase().includes(memberSearch.toLowerCase()) ||
     c.club_address?.toLowerCase().includes(memberSearch.toLowerCase())
   );
   const memberTotalPages = Math.max(1, Math.ceil(filteredClubs.length / MEMBERS_PER_PAGE));
   const memberSlice = filteredClubs.slice((memberPage - 1) * MEMBERS_PER_PAGE, memberPage * MEMBERS_PER_PAGE);
 
-  /* ── team filtering + pagination ── */
-  const filteredTeams = teamsAll.filter(t => {
-    const matchSearch = !teamSearch ||
-      t.club_name?.toLowerCase().includes(teamSearch.toLowerCase()) ||
-      t.province_name?.toLowerCase().includes(teamSearch.toLowerCase()) ||
-      t.region?.toLowerCase().includes(teamSearch.toLowerCase());
-    const matchCat = teamCategory === 'all' ||
-      (t.category_name || '').toLowerCase().replace(/ /g, '_') === teamCategory;
-    const matchLevel = teamLevel === 'all' || t.level === teamLevel;
-    return matchSearch && matchCat && matchLevel;
-  });
-  const teamTotalPages = Math.max(1, Math.ceil(filteredTeams.length / TEAMS_PER_PAGE));
-  const teamSlice = filteredTeams.slice((teamPage - 1) * TEAMS_PER_PAGE, teamPage * TEAMS_PER_PAGE);
-
-  /* comp stats */
-  const rukibraCount = teamsAll.filter(t => (t.category_name || '').toLowerCase().includes('rukibra')).length;
-  const barisCount   = teamsAll.filter(t => (t.category_name || '').toLowerCase().includes('baris')).length;
-  const varforCount  = teamsAll.filter(t => (t.category_name || '').toLowerCase().includes('varfor')).length;
-
-  /* ─── render ─────────────────────────────────────────── */
+  /* ─── Render ──────────────────────────────────────────── */
   return (
-    <div style={{ fontFamily: "'Poppins', sans-serif", backgroundColor: '#f1faee', minHeight: '100vh' }}>
+    <div className="hp-root">
 
       {/* ════ NAVBAR ════ */}
       <nav className={`hp-navbar${scrolled ? ' scrolled' : ''}`}>
         <div className="hp-nav">
-          <button className="hp-nav-link" onClick={() => scrollTo('hero')} style={{ padding: 0, background: 'none' }}>
-            <img src="/logo-forbasi.png" alt="FORBASI" style={{ height: 40, width: 'auto' }} />
+          <button className="hp-brand" onClick={() => scrollTo('hero')}>
+            <img src="/logo-forbasi.png" alt="FORBASI" />
+            <span className="hp-brand-text">FORBASI</span>
           </button>
-          <div style={{ display: 'flex', gap: '0.25rem' }}>
-            {[['hero','Beranda','fa-home'],['what','Tentang','fa-info-circle'],['program','Program','fa-calendar-alt'],['lisensi','Lisensi','fa-certificate'],['members','Anggota','fa-users'],['competition','Kompetisi','fa-trophy']].map(([id, label, icon]) => (
+          <div className="hp-nav-links">
+            {NAV_ITEMS.map(([id, label, icon]) => (
               <button key={id} className="hp-nav-link" onClick={() => scrollTo(id)}>
                 <i className={`fas ${icon}`} />
-                {label}
+                <span>{label}</span>
               </button>
             ))}
           </div>
-          <Link to="/login" className="hp-login-btn">Login</Link>
-        </div>
-      </nav>
-
-      {/* ════ HERO ════ */}
-      <section id="hero" className="hp-hero-section">
-        <div className="hp-video-bg">
-          <video autoPlay loop muted playsInline poster="/logo-forbasi.png">
-            <source src="/forbasi.mp4" type="video/mp4" />
-          </video>
-          <div className="hp-video-overlay" />
-        </div>
-        <div className="hp-hero-content">
-          <img src="/logo-forbasi.png" alt="FORBASI"
-            style={{ height: 100, width: 'auto', margin: '0 auto 1.5rem', filter: 'drop-shadow(0 4px 20px rgba(0,0,0,0.4))' }} />
-          <h1>PB FORBASI</h1>
-          <p>Federasi Olahraga Baris Berbaris Seluruh Indonesia</p>
-          <div className="hp-hero-btns">
-            <Link to="/login" className="hp-hero-btn-primary">
-              <i className="fas fa-sign-in-alt" /> Login
+          <div className="hp-nav-actions">
+            <Link to="/login" className="hp-login-btn">
+              <i className="fas fa-sign-in-alt" /> Masuk
             </Link>
-            <button className="hp-hero-btn-outline" onClick={() => scrollTo('program')}>
-              <i className="fas fa-calendar-alt" /> Program Kami
+            <button className="hp-mobile-toggle" onClick={() => setMobileNav(!mobileNav)}>
+              <i className={`fas ${mobileNav ? 'fa-times' : 'fa-bars'}`} />
             </button>
           </div>
         </div>
-        <div className="hp-scroll-indicator">
+        {/* Mobile nav */}
+        {mobileNav && (
+          <div className="hp-mobile-nav">
+            {NAV_ITEMS.map(([id, label, icon]) => (
+              <button key={id} onClick={() => scrollTo(id)}>
+                <i className={`fas ${icon}`} /> {label}
+              </button>
+            ))}
+            <Link to="/login" className="hp-mobile-login" onClick={() => setMobileNav(false)}>
+              <i className="fas fa-sign-in-alt" /> Masuk
+            </Link>
+          </div>
+        )}
+      </nav>
+
+      {/* ════ HERO ════ */}
+      <section id="hero" className="hp-hero">
+        <div className="hp-hero-bg">
+          <video autoPlay loop muted playsInline poster="/logo-forbasi.png">
+            <source src="/forbasi.mp4" type="video/mp4" />
+          </video>
+          <div className="hp-hero-overlay" />
+        </div>
+        <div className="hp-hero-content">
+          <div className="hp-hero-badge">
+            <i className="fas fa-star" /> Forum Baris Indonesia
+          </div>
+          <h1 className="hp-hero-title">
+            PB <span>FORBASI</span>
+          </h1>
+          <p className="hp-hero-subtitle">
+            Federasi Olahraga Baris Berbaris Seluruh Indonesia
+          </p>
+          <p className="hp-hero-desc">
+            Membina, mengembangkan, dan memasyarakatkan olahraga baris-berbaris untuk membentuk generasi muda yang disiplin, tangguh, dan berkarakter.
+          </p>
+          <div className="hp-hero-btns">
+            <Link to="/register" className="hp-btn-primary">
+              <i className="fas fa-user-plus" /> Daftar Anggota
+            </Link>
+            <button className="hp-btn-glass" onClick={() => scrollTo('about')}>
+              <i className="fas fa-arrow-down" /> Selengkapnya
+            </button>
+          </div>
+        </div>
+        <div className="hp-hero-scroll">
           <div className="hp-mouse"><div className="hp-scroller" /></div>
-          <span>Scroll Down</span>
         </div>
       </section>
 
-      {/* ════ ABOUT ════ */}
-      <section id="what" className="hp-section" style={{ backgroundColor: '#fff' }}>
+      {/* ════ STATS BAR ════ */}
+      <section className="hp-stats-bar" ref={statsRef}>
         <div className="hp-container">
-          <div className="hp-section-header">
-            <h2 className="hp-section-title">Tentang FORBASI</h2>
-            <div className="hp-divider" />
-          </div>
-          <div className="hp-about-content">
-            <div className="hp-about-text">
-              <p>FORBASI (Federasi Olahraga Baris-Berbaris Seluruh Indonesia) adalah organisasi yang membina, mengembangkan, dan memasyarakatkan olahraga baris-berbaris di Indonesia. Kami berkomitmen untuk membentuk generasi muda yang disiplin, tangguh, dan berkarakter melalui berbagai program pelatihan dan kompetisi.</p>
-              <p>Dengan jaringan di seluruh Indonesia, FORBASI menjadi wadah bagi para pecinta baris-berbaris untuk mengembangkan bakat, meningkatkan keterampilan, dan berprestasi di tingkat nasional maupun internasional.</p>
-            </div>
-            <div className="hp-about-logos">
-              <div style={{ marginBottom: '1.5rem' }}>
-                <div className="hp-logo-card">
-                  <img src="/logo-forbasi.png" alt="FORBASI"
-                    style={{ height: 110, width: 'auto', objectFit: 'contain' }} />
-                </div>
-              </div>
-              <div style={{ marginBottom: '1.5rem' }}>
-                <div className="hp-logo-card">
-                  <img src="/logo-forbasi.png" alt="KORMI"
-                    style={{ height: 110, width: 'auto', objectFit: 'contain', opacity: 0.7 }} />
-                  <div className="hp-badge">Anggota KORMI</div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ════ PROGRAMS ════ */}
-      <section id="program" className="hp-section" style={{ backgroundColor: '#f1faee' }}>
-        <div className="hp-container">
-          <div className="hp-section-header">
-            <h2 className="hp-section-title">Program Kami</h2>
-            <div className="hp-divider" />
-            <p className="hp-section-desc">Berbagai program unggulan untuk pengembangan olahraga baris-berbaris di Indonesia</p>
-          </div>
-          <div className="hp-programs-grid">
-            {PROGRAMS.map(p => (
-              <div key={p.title} className={`hp-program-card${p.highlight ? ' highlight' : ''}`}>
-                <div className="hp-program-icon">
-                  <img src={p.icon} alt={p.title} style={{ width: 48, height: 48, objectFit: 'contain' }} loading="lazy" />
-                </div>
-                <h3>{p.title}</h3>
-                <p>{p.desc}</p>
-                <span className="hp-program-more">
-                  Selengkapnya <i className="fas fa-arrow-right" style={{ fontSize: '0.8rem', marginLeft: 4 }} />
-                </span>
+          <div className="hp-stats-grid">
+            {[
+              { icon: 'fa-users', val: memberCountAnim, label: 'Anggota Resmi', suffix: '+' },
+              { icon: 'fa-eye', val: visitorAnim, label: 'Total Kunjungan', suffix: '' },
+              { icon: 'fa-map-marked-alt', val: 34, label: 'Provinsi', suffix: '' },
+              { icon: 'fa-calendar-check', val: 2025, label: 'Sejak Tahun', suffix: '' },
+            ].map(s => (
+              <div key={s.label} className="hp-stat-card">
+                <i className={`fas ${s.icon}`} />
+                <div className="hp-stat-val">{typeof s.val === 'number' ? s.val.toLocaleString('id-ID') : s.val}{s.suffix}</div>
+                <div className="hp-stat-lbl">{s.label}</div>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* ════ LICENSE ════ */}
-      <section id="lisensi" className="hp-section" style={{ backgroundColor: '#fff' }}>
-        <div className="hp-container" style={{ maxWidth: 900 }}>
-          <div className="hp-section-header">
-            <h2 className="hp-section-title">
-              <i className="fas fa-certificate" style={{ marginRight: 10, color: 'rgb(0,73,24)' }} />
-              Lisensi Pelatih &amp; Juri
-            </h2>
-            <div className="hp-divider" />
-            <p className="hp-section-desc">Daftarkan diri Anda untuk mengikuti program sertifikasi lisensi pelatih atau juri FORBASI</p>
+      {/* ════ TENTANG KAMI ════ */}
+      <section id="about" className="hp-section hp-section-dark">
+        <div className="hp-container">
+          <div className="hp-section-head">
+            <span className="hp-tag">Tentang Kami</span>
+            <h2>Forum Baris Indonesia</h2>
+            <p>Mengenal lebih dekat organisasi yang membina baris-berbaris di Indonesia</p>
           </div>
-
-          {/* Event card */}
-          <div className="hp-license-event">
-            <div className="hp-license-tag">
-              <i className="fas fa-calendar-star" style={{ marginRight: 6 }} />Jadwal Terbaru
-            </div>
-            <h3 style={{ fontSize: '1.3rem', fontWeight: 700, marginBottom: '1.25rem' }}>
-              Lisensi Pelatih dan Juri (Muda &amp; Madya)
-            </h3>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1.5rem', fontSize: '0.95rem' }}>
-              <span><i className="fas fa-calendar-alt" style={{ marginRight: 8, opacity: 0.8 }} />Minggu, 12 April 2026</span>
-              <span><i className="fas fa-clock" style={{ marginRight: 8, opacity: 0.8 }} />08.00 WIB s/d selesai</span>
-              <span><i className="fas fa-map-marker-alt" style={{ marginRight: 8, opacity: 0.8 }} />Semarang, Jawa Tengah</span>
-            </div>
-          </div>
-
-          {/* License cards */}
-          <div className="hp-license-cards">
-            <div className="hp-license-card">
-              <div className="hp-license-card-header" style={{ backgroundColor: 'rgb(0,73,24)' }}>
-                <i className="fas fa-chalkboard-teacher" />
-                <h3>Lisensi Pelatih</h3>
+          <div className="hp-about-grid">
+            <div className="hp-about-text-col">
+              <div className="hp-glass-card">
+                <div className="hp-about-icon-row">
+                  <div className="hp-about-icon"><i className="fas fa-bullseye" /></div>
+                  <h3>Visi</h3>
+                </div>
+                <p>Menjadi federasi olahraga baris-berbaris yang profesional, mandiri, dan berdaya saing di tingkat nasional maupun internasional.</p>
               </div>
-              <div className="hp-license-card-body">
-                <p className="hp-price-label">Investasi</p>
-                <p className="hp-price" style={{ color: 'rgb(0,73,24)' }}>Rp 750.000</p>
-                <Link to="/register-license" className="hp-license-btn" style={{ backgroundColor: 'rgb(0,73,24)' }}>
-                  <i className="fas fa-user-plus" style={{ marginRight: 8 }} />Daftar Sekarang
-                </Link>
+              <div className="hp-glass-card">
+                <div className="hp-about-icon-row">
+                  <div className="hp-about-icon"><i className="fas fa-rocket" /></div>
+                  <h3>Misi</h3>
+                </div>
+                <ul className="hp-mission-list">
+                  <li>Membina dan mengembangkan olahraga baris-berbaris di seluruh Indonesia</li>
+                  <li>Menyelenggarakan kompetisi berkualitas dari daerah hingga nasional</li>
+                  <li>Meningkatkan kualitas pelatih dan juri melalui program sertifikasi</li>
+                  <li>Membangun jaringan keanggotaan yang solid dan profesional</li>
+                </ul>
               </div>
             </div>
-            <div className="hp-license-card" style={{ border: '2px solid #1d3557' }}>
-              <div className="hp-license-card-header" style={{ backgroundColor: '#1d3557', position: 'relative' }}>
-                <span style={{
-                  position: 'absolute', top: 12, right: 12,
-                  background: '#ffc107', color: '#1d3557',
-                  fontSize: '0.72rem', fontWeight: 700,
-                  padding: '0.2rem 0.7rem', borderRadius: 50
-                }}>Muda &amp; Madya</span>
-                <i className="fas fa-gavel" />
-                <h3>Lisensi Juri</h3>
+            <div className="hp-about-visual">
+              <div className="hp-about-logo-wrap">
+                <img src="/logo-forbasi.png" alt="FORBASI" />
               </div>
-              <div className="hp-license-card-body">
-                <p className="hp-price-label">Investasi</p>
-                <p className="hp-price" style={{ color: '#1d3557' }}>Rp 2.000.000</p>
-                <Link to="/register-license" className="hp-license-btn" style={{ backgroundColor: '#1d3557' }}>
-                  <i className="fas fa-user-plus" style={{ marginRight: 8 }} />Daftar Sekarang
-                </Link>
+              <div className="hp-about-badges">
+                <div className="hp-about-badge-item">
+                  <i className="fas fa-shield-alt" />
+                  <span>Anggota KORMI</span>
+                </div>
+                <div className="hp-about-badge-item">
+                  <i className="fas fa-globe-asia" />
+                  <span>Seluruh Indonesia</span>
+                </div>
               </div>
             </div>
           </div>
+        </div>
+      </section>
 
-          {/* Registration steps */}
-          <div className="hp-steps-wrap">
-            <h4 style={{ fontWeight: 600, color: '#1d3557', fontSize: '1.05rem' }}>
-              <i className="fas fa-list-ol" style={{ marginRight: 8, color: 'rgb(0,73,24)' }} />
-              Langkah Pendaftaran
-            </h4>
-            <div className="hp-steps">
-              {[['Buat Akun','Daftar akun sebagai Pelatih atau Juri'],['Lengkapi Data','Isi formulir dan upload dokumen persyaratan'],['Verifikasi PB','Pengajuan akan diverifikasi oleh PB FORBASI'],['Selesai','Lisensi disetujui dan Anda siap mengikuti pelatihan']].map(([title, desc], i) => (
-                <Fragment key={title}>
-                  <div className="hp-step">
-                    <div className="hp-step-num">{i + 1}</div>
-                    <p className="hp-step-title">{title}</p>
-                    <p className="hp-step-desc">{desc}</p>
+      {/* ════ STRUKTUR ORGANISASI ════ */}
+      <section id="struktur" className="hp-section hp-section-light">
+        <div className="hp-container">
+          <div className="hp-section-head dark-text">
+            <span className="hp-tag green">Struktur Organisasi</span>
+            <h2>Pengurus PB FORBASI</h2>
+            <p>Susunan pengurus Pengurus Besar FORBASI periode aktif</p>
+          </div>
+          <div className="hp-struktur-grid">
+            {STRUKTUR_DATA.map((s, i) => (
+              <div key={i} className={`hp-struktur-card${i === 0 ? ' primary' : ''}`}>
+                <div className="hp-struktur-icon">
+                  <i className={`fas ${s.icon}`} />
+                </div>
+                <h4>{s.jabatan}</h4>
+                <p>{s.nama}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ════ KATALOG JURI & PELATIH ════ */}
+      <section id="katalog" className="hp-section hp-section-dark">
+        <div className="hp-container">
+          <div className="hp-section-head">
+            <span className="hp-tag">Katalog Lisensi</span>
+            <h2>Juri & Pelatih FORBASI</h2>
+            <p>Jenjang lisensi dan persyaratan untuk menjadi juri atau pelatih baris-berbaris profesional</p>
+          </div>
+
+          {/* Tabs */}
+          <div className="hp-katalog-tabs">
+            <button className={`hp-ktab${katalogTab === 'juri' ? ' active' : ''}`} onClick={() => setKatalogTab('juri')}>
+              <i className="fas fa-gavel" /> Katalog Juri
+            </button>
+            <button className={`hp-ktab${katalogTab === 'pelatih' ? ' active' : ''}`} onClick={() => setKatalogTab('pelatih')}>
+              <i className="fas fa-chalkboard-teacher" /> Katalog Pelatih
+            </button>
+          </div>
+
+          {/* Juri Cards */}
+          {katalogTab === 'juri' && (
+            <div className="hp-katalog-grid">
+              {KATALOG_JURI.map((k, i) => (
+                <div key={i} className={`hp-katalog-card ${k.warna}`}>
+                  <div className="hp-katalog-level">
+                    <div className="hp-katalog-badge">{k.warna === 'emerald' ? 'C' : k.warna === 'blue' ? 'B' : 'A'}</div>
+                    <h3>{k.level}</h3>
                   </div>
-                  {i < 3 && <i className="fas fa-arrow-right hp-step-arrow" style={{ color: '#dee2e6', fontSize: '1.2rem', flexShrink: 0 }} />}
-                </Fragment>
+                  <ul>
+                    {k.syarat.map((s, j) => (
+                      <li key={j}><i className="fas fa-check-circle" /> {s}</li>
+                    ))}
+                  </ul>
+                  <div className="hp-katalog-price">
+                    <span className="hp-katalog-price-label">Biaya Lisensi</span>
+                    <span className="hp-katalog-price-val">Rp 2.000.000 <small>(tanpa kamar)</small></span>
+                    <span className="hp-katalog-price-val secondary">Rp 2.250.000 <small>(dengan kamar)</small></span>
+                  </div>
+                  <Link to="/register-license" className={`hp-katalog-btn ${k.warna}`}>
+                    <i className="fas fa-user-plus" /> Daftar Lisensi
+                  </Link>
+                </div>
               ))}
             </div>
-          </div>
-        </div>
-      </section>
+          )}
 
-      {/* ════ MERCHANDISE ════ */}
-      <section id="product" className="hp-section" style={{ backgroundColor: '#f1faee' }}>
-        <div className="hp-container" style={{ maxWidth: 900 }}>
-          <div className="hp-section-header">
-            <h2 className="hp-section-title">Merchandise</h2>
-            <div className="hp-divider" />
-            <p className="hp-section-desc">Dapatkan merchandise resmi FORBASI untuk mendukung kegiatan kami</p>
-          </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2,1fr)', gap: '2rem', maxWidth: 640, margin: '0 auto' }}>
-            {[['Kemeja Forbasi','Rp 150.000'],['Jersey Forbasi','Rp 170.000']].map(([name, price]) => (
-              <div key={name} className="hp-merch-card">
-                <div className="hp-merch-image">
-                  <i className="fas fa-tshirt" style={{ fontSize: '5rem', color: 'rgba(29,53,87,0.2)' }} />
+          {/* Pelatih Cards */}
+          {katalogTab === 'pelatih' && (
+            <div className="hp-katalog-grid">
+              {KATALOG_PELATIH.map((k, i) => (
+                <div key={i} className={`hp-katalog-card ${k.warna}`}>
+                  <div className="hp-katalog-level">
+                    <div className="hp-katalog-badge">{k.warna === 'emerald' ? 'C' : k.warna === 'blue' ? 'B' : 'A'}</div>
+                    <h3>{k.level}</h3>
+                  </div>
+                  <ul>
+                    {k.syarat.map((s, j) => (
+                      <li key={j}><i className="fas fa-check-circle" /> {s}</li>
+                    ))}
+                  </ul>
+                  <div className="hp-katalog-price">
+                    <span className="hp-katalog-price-label">Biaya Lisensi</span>
+                    <span className="hp-katalog-price-val">Rp 750.000 <small>(tanpa kamar)</small></span>
+                    <span className="hp-katalog-price-val secondary">Rp 1.000.000 <small>(dengan kamar)</small></span>
+                  </div>
+                  <Link to="/register-license" className={`hp-katalog-btn ${k.warna}`}>
+                    <i className="fas fa-user-plus" /> Daftar Lisensi
+                  </Link>
                 </div>
-                <div style={{ padding: '1.5rem' }}>
-                  <h3 style={{ fontWeight: 700, color: '#1d3557', marginBottom: '0.5rem' }}>{name}</h3>
-                  <div className="hp-merch-price">{price}</div>
-                  <button className="hp-buy-btn">
-                    <i className="fas fa-shopping-cart" style={{ marginRight: 8 }} />Beli Sekarang
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ════ MEMBERS ════ */}
-      <section id="members" className="hp-section" style={{ backgroundColor: '#fff' }} ref={membersRef}>
-        <div className="hp-container">
-          <div className="hp-section-header">
-            <h2 className="hp-section-title">Anggota Resmi FORBASI</h2>
-            <div className="hp-divider" />
-            <p className="hp-section-desc">Daftar klub yang telah menjadi anggota resmi FORBASI dengan KTA terbit.</p>
-          </div>
-
-          {/* Counter */}
-          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '3rem' }}>
-            <div className="hp-count-card">
-              <div className="hp-count-icon">
-                <i className="fas fa-users" />
-              </div>
-              <div>
-                <div className="hp-count-number">{memberCountAnim.toLocaleString('id-ID')}</div>
-                <div className="hp-count-label">Total Anggota Resmi</div>
-              </div>
+              ))}
             </div>
+          )}
+        </div>
+      </section>
+
+      {/* ════ ANGGOTA AKTIF ════ */}
+      <section id="members" className="hp-section hp-section-light" ref={membersRef}>
+        <div className="hp-container">
+          <div className="hp-section-head dark-text">
+            <span className="hp-tag green">Anggota Aktif</span>
+            <h2>Klub Anggota Resmi FORBASI</h2>
+            <p>Daftar klub yang telah menjadi anggota resmi dengan KTA terbit</p>
           </div>
 
-          {/* Search */}
-          <div className="hp-search-wrap">
-            <div className="hp-search-box">
+          {/* Counter + Search */}
+          <div className="hp-members-toolbar">
+            <div className="hp-member-count">
+              <i className="fas fa-id-card" />
+              <span><strong>{memberCountAnim.toLocaleString('id-ID')}</strong> Anggota Aktif</span>
+            </div>
+            <div className="hp-member-search">
               <i className="fas fa-search" />
               <input
                 type="text"
-                placeholder="Cari nama klub, pelatih, atau manajer..."
+                placeholder="Cari nama klub, pelatih..."
                 value={memberSearch}
                 onChange={e => { setMemberSearch(e.target.value); setMemberPage(1); }}
               />
               {memberSearch && (
-                <button className="hp-clear-btn" onClick={() => { setMemberSearch(''); setMemberPage(1); }}>
+                <button onClick={() => { setMemberSearch(''); setMemberPage(1); }}>
                   <i className="fas fa-times" />
                 </button>
               )}
             </div>
-            {memberSearch && (
-              <div className="hp-search-result">
-                Ditemukan <strong>{filteredClubs.length}</strong> anggota untuk &quot;{memberSearch}&quot;
-              </div>
-            )}
           </div>
 
-          {/* Members grid */}
+          {memberSearch && (
+            <p className="hp-search-info">Ditemukan <strong>{filteredClubs.length}</strong> anggota untuk &quot;{memberSearch}&quot;</p>
+          )}
+
+          {/* Members Grid */}
           {filteredClubs.length === 0 ? (
-            <p style={{ textAlign: 'center', color: '#6c757d', padding: '3rem 0', fontSize: '1.1rem' }}>
-              Belum ada anggota resmi yang terdaftar saat ini.
-            </p>
+            <div className="hp-empty">
+              <i className="fas fa-users-slash" />
+              <p>Belum ada anggota resmi yang terdaftar</p>
+            </div>
           ) : (
             <div className="hp-members-grid">
               {memberSlice.map(club => (
                 <div key={club.id} className="hp-member-card">
-                  <div className="hp-member-img-wrap">
+                  <div className="hp-member-avatar">
                     {club.logo_path ? (
                       <img
                         src={`${import.meta.env.VITE_API_URL?.replace('/api', '')}/uploads/${club.logo_path}`}
@@ -421,14 +441,20 @@ export default function Homepage() {
                         onError={e => { e.target.src = '/logo-forbasi.png'; }}
                       />
                     ) : (
-                      <span className="hp-member-initial">{(club.club_name || '?')[0]}</span>
+                      <span>{(club.club_name || '?')[0]}</span>
                     )}
                   </div>
-                  <div className="hp-member-badge">ANGGOTA RESMI FORBASI</div>
-                  <h3>{club.club_name}</h3>
-                  {club.club_address && <p><strong>Alamat:</strong> {club.club_address}</p>}
-                  <p><strong>Pelatih:</strong> {club.coach_name || '-'}</p>
-                  <p><strong>Manajer:</strong> {club.manager_name || '-'}</p>
+                  <div className="hp-member-info">
+                    <h4>{club.club_name}</h4>
+                    {club.club_address && <p className="hp-member-addr"><i className="fas fa-map-marker-alt" /> {club.club_address}</p>}
+                    <div className="hp-member-meta">
+                      <span><i className="fas fa-user-tie" /> {club.coach_name || '-'}</span>
+                      <span><i className="fas fa-user-shield" /> {club.manager_name || '-'}</span>
+                    </div>
+                  </div>
+                  <div className="hp-member-badge-wrap">
+                    <span className="hp-kta-badge"><i className="fas fa-check-circle" /> KTA Terbit</span>
+                  </div>
                 </div>
               ))}
             </div>
@@ -437,237 +463,134 @@ export default function Homepage() {
           {/* Pagination */}
           {memberTotalPages > 1 && (
             <div className="hp-pagination">
-              <button className="hp-page-btn" onClick={() => setMemberPage(p => p - 1)} disabled={memberPage <= 1}>
-                <i className="fas fa-chevron-left" /> Sebelumnya
+              <button onClick={() => setMemberPage(p => Math.max(1, p - 1))} disabled={memberPage <= 1}>
+                <i className="fas fa-chevron-left" />
               </button>
-              <div className="hp-page-info">
-                Halaman <span>{memberPage}</span> dari <span>{memberTotalPages}</span>
-                <div style={{ fontSize: '0.8rem', color: '#6c757d', marginTop: 2 }}>
-                  ({MEMBERS_PER_PAGE} anggota per halaman)
-                </div>
-              </div>
-              <button className="hp-page-btn" onClick={() => setMemberPage(p => p + 1)} disabled={memberPage >= memberTotalPages}>
-                Selanjutnya <i className="fas fa-chevron-right" />
+              <span className="hp-page-info">
+                {memberPage} / {memberTotalPages}
+              </span>
+              <button onClick={() => setMemberPage(p => Math.min(memberTotalPages, p + 1))} disabled={memberPage >= memberTotalPages}>
+                <i className="fas fa-chevron-right" />
               </button>
             </div>
           )}
         </div>
       </section>
 
-      {/* ════ COMPETITION ════ */}
-      <section id="competition" className="hp-section" style={{ backgroundColor: '#f1faee' }} ref={compRef}>
+      {/* ════ BERITA ════ */}
+      <section id="berita" className="hp-section hp-section-dark">
         <div className="hp-container">
-          <div className="hp-section-header">
-            <h2 className="hp-section-title">
-              <i className="fas fa-trophy" style={{ marginRight: 10, color: '#f0a500' }} />
-              Tim Kompetisi Kejurnas
-            </h2>
-            <div className="hp-divider" />
-            <p className="hp-section-desc">Tim-tim terbaik yang telah lolos seleksi untuk mengikuti kompetisi nasional</p>
+          <div className="hp-section-head">
+            <span className="hp-tag">Informasi Terkini</span>
+            <h2>Berita & Pengumuman</h2>
+            <p>Ikuti perkembangan terbaru dari PB FORBASI</p>
           </div>
-
-          {/* Stats */}
-          <div className="hp-comp-stats">
-            {[
-              { label: 'Total Tim', val: totalTeamsAnim, icon: 'fa-users', bg: 'linear-gradient(135deg,#0d9500,#0a7300)' },
-              { label: 'Rukibra', val: rukibraCount, icon: 'fa-flag', bg: 'linear-gradient(135deg,#0ea5e9,#0284c7)' },
-              { label: 'Baris Berbaris', val: barisCount, icon: 'fa-drum', bg: 'linear-gradient(135deg,#eab308,#ca8a04)' },
-              { label: 'Varfor Musik', val: varforCount, icon: 'fa-music', bg: 'linear-gradient(135deg,#ef4444,#b91c1c)' },
-            ].map(s => (
-              <div key={s.label} className="hp-comp-stat" style={{ background: s.bg }}>
-                <i className={`fas ${s.icon}`} />
-                <div className="stat-num">{s.val}</div>
-                <div className="stat-lbl">{s.label}</div>
-              </div>
-            ))}
-          </div>
-
-          {/* Search + Level filter */}
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1rem', marginBottom: '1.5rem' }}>
-            <div className="hp-search-box" style={{ flex: 1, minWidth: 240, maxWidth: '100%', margin: 0 }}>
-              <i className="fas fa-search" />
-              <input
-                type="text"
-                placeholder="Cari nama klub, provinsi..."
-                value={teamSearch}
-                onChange={e => { setTeamSearch(e.target.value); setTeamPage(1); }}
-              />
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <i className="fas fa-graduation-cap" style={{ color: '#6c757d' }} />
-              <select
-                value={teamLevel}
-                onChange={e => { setTeamLevel(e.target.value); setTeamPage(1); }}
-                style={{
-                  padding: '0.75rem 1rem', border: '1px solid #dee2e6',
-                  borderRadius: 10, fontSize: '0.95rem',
-                  fontFamily: "'Poppins',sans-serif", background: '#fff'
-                }}
-              >
-                <option value="all">Semua Tingkat</option>
-                {['SD','SMP','SMA','Purna'].map(l => <option key={l} value={l}>{l}</option>)}
-              </select>
-            </div>
-          </div>
-
-          {/* Category tabs */}
-          <div className="hp-comp-tabs">
-            {[['all','Semua','fa-th'],['rukibra','Rukibra','fa-flag'],['baris_berbaris','Baris Berbaris','fa-person-military-rifle'],['varfor_musik','Varfor Musik','fa-drum']].map(([val, label, icon]) => (
-              <button key={val} className={`hp-tab-btn${teamCategory === val ? ' active' : ''}`}
-                onClick={() => { setTeamCategory(val); setTeamPage(1); }}>
-                <i className={`fas ${icon}`} />{label}
-              </button>
-            ))}
-          </div>
-
-          {teamSearch && (
-            <p style={{ fontSize: '0.95rem', color: '#6c757d', marginBottom: '1rem' }}>
-              Ditemukan <strong>{filteredTeams.length}</strong> tim
-            </p>
-          )}
-
-          {/* Teams grid */}
-          {teamsLoading ? (
-            <div style={{ textAlign: 'center', padding: '4rem 0', color: '#6c757d' }}>
-              <i className="fas fa-spinner fa-spin" style={{ fontSize: '2.5rem', marginBottom: '1rem', display: 'block' }} />
-              Memuat data tim...
-            </div>
-          ) : filteredTeams.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: '4rem 0', color: '#6c757d' }}>
-              <i className="fas fa-trophy" style={{ fontSize: '3rem', marginBottom: '1rem', display: 'block', opacity: 0.3 }} />
-              Tidak ada tim ditemukan
-            </div>
-          ) : (
-            <div className="hp-teams-grid">
-              {teamSlice.map(team => (
-                <div key={team.id} className="hp-team-card">
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.75rem' }}>
-                    {team.logo_path ? (
-                      <img
-                        src={`${import.meta.env.VITE_API_URL?.replace('/api', '')}/uploads/${team.logo_path}`}
-                        alt={team.club_name}
-                        style={{ width: 44, height: 44, borderRadius: 8, objectFit: 'cover', flexShrink: 0 }}
-                        onError={e => { e.target.src = '/logo-forbasi.png'; }}
-                      />
-                    ) : (
-                      <div style={{
-                        width: 44, height: 44, borderRadius: 8, flexShrink: 0,
-                        background: 'rgba(0,73,24,0.08)', display: 'flex',
-                        alignItems: 'center', justifyContent: 'center',
-                        fontWeight: 700, color: 'rgb(0,73,24)', fontSize: '1.1rem'
-                      }}>
-                        {(team.club_name || '?')[0]}
-                      </div>
-                    )}
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <p style={{ fontWeight: 600, color: '#1d3557', fontSize: '0.9rem', margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                        {team.club_name}
-                      </p>
-                      <p style={{ fontSize: '0.8rem', color: '#6c757d', margin: 0 }}>{team.province_name || '-'}</p>
-                    </div>
-                  </div>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem' }}>
-                    {team.category_name && (
-                      <span style={{ background: 'rgba(0,73,24,0.1)', color: 'rgb(0,73,24)', fontSize: '0.75rem', padding: '0.2rem 0.7rem', borderRadius: 50 }}>
-                        {team.category_name}
-                      </span>
-                    )}
-                    {team.level && (
-                      <span style={{ background: 'rgba(29,53,87,0.1)', color: '#1d3557', fontSize: '0.75rem', padding: '0.2rem 0.7rem', borderRadius: 50 }}>
-                        {team.level}
-                      </span>
-                    )}
-                  </div>
+          <div className="hp-berita-grid">
+            {BERITA_PLACEHOLDER.map(b => (
+              <article key={b.id} className="hp-berita-card">
+                <div className="hp-berita-icon-wrap">
+                  <i className={`fas ${b.icon}`} />
                 </div>
-              ))}
-            </div>
-          )}
+                <div className="hp-berita-body">
+                  <div className="hp-berita-meta">
+                    <span className="hp-berita-cat">{b.kategori}</span>
+                    <span className="hp-berita-date"><i className="fas fa-calendar" /> {b.tanggal}</span>
+                  </div>
+                  <h3>{b.judul}</h3>
+                  <p>{b.ringkasan}</p>
+                </div>
+              </article>
+            ))}
+          </div>
+        </div>
+      </section>
 
-          {/* Teams pagination */}
-          {teamTotalPages > 1 && (
-            <div className="hp-pagination">
-              <button className="hp-page-btn" onClick={() => setTeamPage(p => p - 1)} disabled={teamPage <= 1}>
-                <i className="fas fa-chevron-left" /> Sebelumnya
-              </button>
-              <div className="hp-page-info">
-                Halaman <span>{teamPage}</span> dari <span>{teamTotalPages}</span>
-                <div style={{ fontSize: '0.8rem', color: '#6c757d', marginTop: 2 }}>({filteredTeams.length} tim)</div>
+      {/* ════ MARKETPLACE ════ */}
+      <section id="marketplace" className="hp-section hp-section-light">
+        <div className="hp-container">
+          <div className="hp-section-head dark-text">
+            <span className="hp-tag green">Marketplace</span>
+            <h2>Merchandise Resmi FORBASI</h2>
+            <p>Dapatkan merchandise resmi untuk mendukung kegiatan baris-berbaris</p>
+          </div>
+          <div className="hp-market-grid">
+            {MARKETPLACE_ITEMS.map((item, i) => (
+              <div key={i} className="hp-market-card">
+                <div className={`hp-market-icon bg-gradient-to-br ${item.warna}`}>
+                  <i className={`fas ${item.icon}`} />
+                </div>
+                <h4>{item.nama}</h4>
+                <div className="hp-market-price">{item.harga}</div>
+                <button className="hp-market-btn">
+                  <i className="fas fa-shopping-cart" /> Beli Sekarang
+                </button>
               </div>
-              <button className="hp-page-btn" onClick={() => setTeamPage(p => p + 1)} disabled={teamPage >= teamTotalPages}>
-                Selanjutnya <i className="fas fa-chevron-right" />
-              </button>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ════ CTA ════ */}
+      <section className="hp-cta">
+        <div className="hp-container">
+          <div className="hp-cta-inner">
+            <h2>Bergabung Bersama FORBASI</h2>
+            <p>Jadilah bagian dari komunitas baris-berbaris terbesar di Indonesia</p>
+            <div className="hp-cta-btns">
+              <Link to="/register" className="hp-btn-primary">
+                <i className="fas fa-user-plus" /> Daftar Anggota
+              </Link>
+              <Link to="/register-license" className="hp-btn-glass">
+                <i className="fas fa-certificate" /> Daftar Lisensi
+              </Link>
             </div>
-          )}
+          </div>
         </div>
       </section>
 
       {/* ════ FOOTER ════ */}
-      <footer id="footer" className="hp-footer" ref={footerRef}>
-        {/* Stats bar — dark green gradient */}
-        <div className="hp-footer-stats">
-          <div className="hp-container">
-            <div className="hp-footer-stats-grid">
-              {[
-                { icon: 'fa-eye', val: visitorAnim.toLocaleString('id-ID'), label: 'Total Kunjungan' },
-                { icon: 'fa-users', val: (totalMembers || 0).toLocaleString('id-ID'), label: 'Anggota Resmi' },
-                { icon: 'fa-trophy', val: teamsAll.length, label: 'Tim Kompetisi' },
-                { icon: 'fa-calendar-check', val: '2025', label: 'Sejak Tahun' },
-              ].map(s => (
-                <div key={s.label} className="hp-stat-item">
-                  <div className="hp-stat-icon">
-                    <i className={`fas ${s.icon}`} />
-                  </div>
-                  <div>
-                    <div className="hp-stat-number">{s.val}</div>
-                    <div className="hp-stat-label">{s.label}</div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        {/* Footer content */}
+      <footer className="hp-footer">
         <div className="hp-container">
-          <div className="hp-footer-content">
-            <div>
-              <img src="/logo-forbasi.png" alt="FORBASI" style={{ height: 60, width: 'auto', marginBottom: '1rem' }} />
-              <p style={{ opacity: 0.8, fontSize: '0.95rem', lineHeight: 1.6 }}>
-                Federasi Olahraga Baris Berbaris Seluruh Indonesia
-              </p>
-              <p style={{ opacity: 0.6, fontSize: '0.85rem', marginTop: '0.5rem' }}>
-                Membina dan mengembangkan baris-berbaris di seluruh Indonesia.
-              </p>
+          <div className="hp-footer-grid">
+            <div className="hp-footer-brand">
+              <img src="/logo-forbasi.png" alt="FORBASI" />
+              <p>Federasi Olahraga Baris Berbaris Seluruh Indonesia</p>
+              <p className="hp-footer-small">Membina dan mengembangkan baris-berbaris di seluruh Indonesia sejak 2025.</p>
             </div>
-            <div className="hp-footer-links">
-              <h3>Quick Links</h3>
-              <ul style={{ listStyle: 'none', margin: 0, padding: 0 }}>
-                {[['hero','Beranda'],['what','Tentang'],['program','Program'],['lisensi','Lisensi'],['members','Anggota Resmi'],['competition','Kompetisi']].map(([id, label]) => (
-                  <li key={id}>
-                    <button className="hp-footer-link" onClick={() => scrollTo(id)}>{label}</button>
-                  </li>
+            <div className="hp-footer-col">
+              <h4>Navigasi</h4>
+              <ul>
+                {NAV_ITEMS.map(([id, label]) => (
+                  <li key={id}><button onClick={() => scrollTo(id)}>{label}</button></li>
                 ))}
               </ul>
             </div>
-            <div>
-              <h3 style={{ fontSize: '1.2rem', fontWeight: 700, marginBottom: '1.5rem', paddingBottom: '0.5rem', position: 'relative', borderBottom: '2px solid rgba(255,255,255,0.1)' }}>
-                Newsletter
-              </h3>
-              <p style={{ opacity: 0.8, fontSize: '0.9rem', marginBottom: 0 }}>
-                Daftar untuk mendapatkan informasi terbaru dari FORBASI
-              </p>
-              <form onSubmit={e => e.preventDefault()} className="newsletter-form">
-                <input type="email" placeholder="Email Anda" />
-                <button type="submit">
-                  <i className="fas fa-paper-plane" />
-                </button>
-              </form>
+            <div className="hp-footer-col">
+              <h4>Layanan</h4>
+              <ul>
+                <li><Link to="/register">Pendaftaran Anggota</Link></li>
+                <li><Link to="/register-license">Lisensi Pelatih</Link></li>
+                <li><Link to="/register-license">Lisensi Juri</Link></li>
+                <li><Link to="/login">Login</Link></li>
+              </ul>
+            </div>
+            <div className="hp-footer-col">
+              <h4>Kontak</h4>
+              <ul className="hp-footer-contact">
+                <li><i className="fas fa-envelope" /> info@forbasi.or.id</li>
+                <li><i className="fas fa-phone" /> (021) xxxx-xxxx</li>
+                <li><i className="fas fa-map-marker-alt" /> Jakarta, Indonesia</li>
+              </ul>
+              <div className="hp-footer-socials">
+                <a href="#" aria-label="Instagram"><i className="fab fa-instagram" /></a>
+                <a href="#" aria-label="YouTube"><i className="fab fa-youtube" /></a>
+                <a href="#" aria-label="Facebook"><i className="fab fa-facebook" /></a>
+              </div>
             </div>
           </div>
         </div>
-
         <div className="hp-footer-bottom">
-          <p>&copy; {new Date().getFullYear()} FORBASI. All Rights Reserved.</p>
+          <p>&copy; {new Date().getFullYear()} PB FORBASI — Forum Baris Indonesia. All Rights Reserved.</p>
         </div>
       </footer>
     </div>

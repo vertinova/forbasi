@@ -3,6 +3,12 @@ const path = require('path');
 const crypto = require('crypto');
 const fs = require('fs');
 
+// Ensure upload directory exists
+const ensureDir = (dir) => {
+  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+  return dir;
+};
+
 // Generate unique filename
 const generateFilename = (file) => {
   const uniqueId = crypto.randomBytes(8).toString('hex');
@@ -27,7 +33,7 @@ const fileFilter = (req, file, cb) => {
 // KTA file upload
 const ktaStorage = multer.diskStorage({
   destination: (req, file, cb) => {
-    cb(null, path.join(__dirname, '../../uploads/kta_files'));
+    cb(null, ensureDir(path.join(__dirname, '../../uploads/kta_files')));
   },
   filename: (req, file, cb) => {
     cb(null, `kta_${generateFilename(file)}`);
@@ -43,7 +49,7 @@ const ktaUpload = multer({
 // License file upload
 const licenseStorage = multer.diskStorage({
   destination: (req, file, cb) => {
-    cb(null, path.join(__dirname, '../../uploads/lisensi'));
+    cb(null, ensureDir(path.join(__dirname, '../../uploads/lisensi')));
   },
   filename: (req, file, cb) => {
     cb(null, `lisensi_${generateFilename(file)}`);
@@ -59,7 +65,7 @@ const licenseUpload = multer({
 // Payment proof upload
 const paymentStorage = multer.diskStorage({
   destination: (req, file, cb) => {
-    cb(null, path.join(__dirname, '../../uploads/payment_proofs'));
+    cb(null, ensureDir(path.join(__dirname, '../../uploads/payment_proofs')));
   },
   filename: (req, file, cb) => {
     cb(null, `payment_${generateFilename(file)}`);
@@ -75,7 +81,7 @@ const paymentUpload = multer({
 // General upload (single file)
 const generalStorage = multer.diskStorage({
   destination: (req, file, cb) => {
-    cb(null, path.join(__dirname, '../../uploads'));
+    cb(null, ensureDir(path.join(__dirname, '../../uploads')));
   },
   filename: (req, file, cb) => {
     cb(null, generateFilename(file));
@@ -113,7 +119,7 @@ const configUpload = multer({
 // Reregistration upload
 const reregistrationStorage = multer.diskStorage({
   destination: (req, file, cb) => {
-    cb(null, path.join(__dirname, '../../uploads/reregistration'));
+    cb(null, ensureDir(path.join(__dirname, '../../uploads/reregistration')));
   },
   filename: (req, file, cb) => {
     cb(null, `rereg_${generateFilename(file)}`);
@@ -130,12 +136,15 @@ const reregistrationUpload = multer({
 const handleUploadError = (err, req, res, next) => {
   if (err instanceof multer.MulterError) {
     if (err.code === 'LIMIT_FILE_SIZE') {
-      return res.status(400).json({ success: false, message: 'Ukuran file maksimal 2MB' });
+      return res.status(400).json({ success: false, message: `File "${err.field}" terlalu besar. Ukuran maksimal 2MB.` });
     }
-    return res.status(400).json({ success: false, message: `Upload error: ${err.message}` });
+    if (err.code === 'LIMIT_UNEXPECTED_FILE') {
+      return res.status(400).json({ success: false, message: `Field file "${err.field}" tidak dikenali atau melebihi jumlah maksimal.` });
+    }
+    return res.status(400).json({ success: false, message: `Upload gagal: ${err.message}` });
   }
   if (err) {
-    return res.status(400).json({ success: false, message: err.message });
+    return res.status(400).json({ success: false, message: err.message || 'Upload gagal. Pastikan format file JPG, PNG, atau PDF.' });
   }
   next();
 };

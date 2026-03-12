@@ -1,5 +1,4 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Link } from 'react-router-dom';
 import SidebarLayout from '../../components/layout/SidebarLayout';
 import {
   Card,
@@ -29,12 +28,15 @@ import {
 import LoadingSpinner from '../../components/common/LoadingSpinner';
 import ConfirmModal from '../../components/common/ConfirmModal';
 import { StatusBadge, formatRupiah } from '../../components/common/DashboardUI';
+import CustomSelect from '../../components/common/CustomSelect';
 import api from '../../services/api';
 import toast from 'react-hot-toast';
 import ManageLicense from '../license/ManageLicense';
 import KejurnasManage from '../kejurnas/KejurnasManage';
 import KtaConfigPage from '../config/KtaConfigPage';
 import ManageReregistration from '../config/ManageReregistration';
+import KtaDetailPanel from '../../components/common/KtaDetailPanel';
+import DocumentPreviewModal from '../../components/common/DocumentPreviewModal';
 
 /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
    CONSTANTS
@@ -145,14 +147,14 @@ const StatCard = ({ icon, grad, label, value, isText, accent = 'emerald' }) => (
   </div>
 );
 
-const FileLink = ({ path, label = 'Lihat' }) => {
+const FileLink = ({ path, label = 'Lihat', onPreview }) => {
   const url = fileUrl(path);
   if (!url) return <span className="text-gray-600 text-xs">—</span>;
   return (
-    <a href={url} target="_blank" rel="noreferrer" onClick={e => e.stopPropagation()}
-      className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-blue-500 border border-blue-600 text-white text-[11px] font-bold shadow-sm hover:bg-blue-600 hover:shadow-md active:scale-[0.97] transition-all">
-      <i className="fas fa-arrow-up-right-from-square text-[9px]" />{label}
-    </a>
+    <button type="button" onClick={e => { e.stopPropagation(); onPreview && onPreview(url, label); }}
+      className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-blue-500 border border-blue-600 text-white text-[11px] font-bold shadow-sm hover:bg-blue-600 hover:shadow-md active:scale-[0.97] transition-all cursor-pointer">
+      <i className="fas fa-eye text-[9px]" />{label}
+    </button>
   );
 };
 
@@ -196,7 +198,11 @@ export default function PbDashboard() {
   const [activeTab, setActiveTab]             = useState('needs_pb_action');
   const [rejectModal, setRejectModal]         = useState({ show:false, id:null });
   const [rejectReason, setRejectReason]       = useState('');
-  const [detailModal, setDetailModal]         = useState({ show:false, app:null });
+  const [selectedAppId, setSelectedAppId]     = useState(null);
+  const [deleteKtaConfirm, setDeleteKtaConfirm] = useState({ show:false, id:null, name:'' });
+  const [deleteKtaLoading, setDeleteKtaLoading] = useState(false);
+  const [regeneratingKtaId, setRegeneratingKtaId] = useState(null);
+  const [docPreview, setDocPreview] = useState({ show: false, url: '', title: '' });
   const [provinces, setProvinces]             = useState([]);
   const [cities, setCities]                   = useState([]);
   const [filterProvince, setFilterProvince]   = useState('');
@@ -392,6 +398,27 @@ export default function PbDashboard() {
     setRejectReason('');
   };
 
+  const handleDeleteKta = async () => {
+    setDeleteKtaLoading(true);
+    try {
+      await api.delete(`/kta/applications/${deleteKtaConfirm.id}`);
+      toast.success('Pengajuan KTA berhasil dihapus');
+      setDeleteKtaConfirm({ show:false, id:null, name:'' });
+      fetchKtaData(ktaPagination.page);
+    } catch (err) { toast.error(err.response?.data?.message || 'Gagal menghapus'); }
+    finally { setDeleteKtaLoading(false); }
+  };
+
+  const handleRegenerateKta = async (appId) => {
+    setRegeneratingKtaId(appId);
+    try {
+      await api.post(`/kta/applications/${appId}/regenerate-all-pdfs`);
+      toast.success('KTA PDF berhasil di-generate ulang');
+      fetchKtaData(ktaPagination.page);
+    } catch (err) { toast.error(err.response?.data?.message || 'Gagal generate ulang KTA'); }
+    finally { setRegeneratingKtaId(null); }
+  };
+
   const handleRecapSubmit = async (e) => {
     e.preventDefault();
     if (!recapForm.recipient_user_id) { toast.error('Pilih penerima'); return; }
@@ -446,11 +473,11 @@ export default function PbDashboard() {
   /* ━━━━━ Derived ━━━━━ */
   const NEEDS_PB = ['approved_pengda', 'pending_pengda_resubmit'];
   const tabCounts = {
-    needs_pb_action: stats?.kta ? ((stats.kta.approved_pengda||0) + (stats.kta.pending_pengda_resubmit||0)) : 0,
-    approved_pb:     stats?.kta?.approved_pb || 0,
-    kta_issued:      stats?.kta?.kta_issued  || 0,
-    rejected_pb:     stats?.kta?.rejected_pb || 0,
-    pending_awal:    stats?.kta ? ((stats.kta.pending||0) + (stats.kta.approved_pengcab||0)) : 0,
+    needs_pb_action: stats?.kta?.needs_pb_action || 0,
+    approved_pb:     stats?.kta?.approved_pb     || 0,
+    kta_issued:      stats?.kta?.kta_issued      || 0,
+    rejected_pb:     stats?.kta?.rejected_pb     || 0,
+    pending_awal:    stats?.kta?.pending_awal    || 0,
   };
 
   /* ━━━━━ Sidebar menu ━━━━━ */
@@ -529,7 +556,7 @@ export default function PbDashboard() {
               <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-4">
                 {[
                   { icon:'fa-users',          iconBg:'bg-gradient-to-br from-violet-500 to-violet-600',  shadowColor:'shadow-violet-500/25',  label:'Total Anggota',  value:stats.users?.total || 0 },
-                  { icon:'fa-hourglass-half',  iconBg:'bg-gradient-to-br from-amber-500 to-amber-600',   shadowColor:'shadow-amber-500/25',   label:'Menunggu PB',    value:(stats.kta?.approved_pengda||0)+(stats.kta?.pending_pengda_resubmit||0), highlight:true },
+                  { icon:'fa-hourglass-half',  iconBg:'bg-gradient-to-br from-amber-500 to-amber-600',   shadowColor:'shadow-amber-500/25',   label:'Menunggu PB',    value:stats.kta?.needs_pb_action||0, highlight:true },
                   { icon:'fa-clock',           iconBg:'bg-gradient-to-br from-blue-500 to-blue-600',     shadowColor:'shadow-blue-500/25',    label:'Proses Pengcab', value:stats.kta?.pending || 0 },
                   { icon:'fa-check-circle',    iconBg:'bg-gradient-to-br from-emerald-500 to-emerald-600',shadowColor:'shadow-emerald-500/25', label:'KTA Terbit',     value:stats.kta?.kta_issued || 0 },
                   { icon:'fa-times-circle',    iconBg:'bg-gradient-to-br from-red-500 to-red-600',       shadowColor:'shadow-red-500/25',     label:'Ditolak',        value:stats.kta?.rejected || 0 },
@@ -723,23 +750,26 @@ export default function PbDashboard() {
           {/* ── Filter strip ── */}
           <div className="flex items-center gap-2 flex-wrap p-3 bg-white/[0.03] border border-white/[0.06] rounded-2xl">
             {/* Province */}
-            <div className="flex items-center gap-2 px-3 py-2 bg-white/[0.05] border border-white/[0.08] rounded-xl hover:border-emerald-500/30 focus-within:border-emerald-500/40 focus-within:ring-2 focus-within:ring-emerald-500/20 transition-all">
-              <i className="fas fa-map-marker-alt text-emerald-400 text-[11px] flex-shrink-0"/>
-              <select value={filterProvince} onChange={e=>setFilterProvince(e.target.value)}
-                className="text-xs bg-transparent border-none text-gray-300 focus:outline-none cursor-pointer pr-7 min-w-[110px]">
-                <option value="">Semua Provinsi</option>
-                {provinces.map(p=><option key={p.id} value={p.id}>{p.name}</option>)}
-              </select>
-            </div>
+            <CustomSelect
+              value={filterProvince}
+              onChange={v=>setFilterProvince(v)}
+              options={[{value:'',label:'Semua Provinsi'},...provinces.map(p=>({value:p.id,label:p.name}))]}
+              placeholder="Semua Provinsi"
+              icon="map-marker-alt"
+              variant="filter"
+              className="min-w-[160px]"
+            />
             {/* City */}
-            <div className={`flex items-center gap-2 px-3 py-2 bg-white/[0.05] border rounded-xl transition-all ${filterProvince ? 'border-white/[0.08] hover:border-emerald-500/30 focus-within:border-emerald-500/40 focus-within:ring-2 focus-within:ring-emerald-500/20' : 'border-white/[0.04] opacity-40 pointer-events-none'}`}>
-              <i className="fas fa-city text-emerald-400 text-[11px] flex-shrink-0"/>
-              <select value={filterCity} onChange={e=>setFilterCity(e.target.value)} disabled={!filterProvince}
-                className="text-xs bg-transparent border-none text-gray-300 focus:outline-none cursor-pointer pr-7 min-w-[100px]">
-                <option value="">Semua Kota</option>
-                {cities.map(c=><option key={c.id} value={c.id}>{c.name}</option>)}
-              </select>
-            </div>
+            <CustomSelect
+              value={filterCity}
+              onChange={v=>setFilterCity(v)}
+              options={[{value:'',label:'Semua Kota'},...cities.map(c=>({value:c.id,label:c.name}))]}
+              placeholder="Semua Kota"
+              icon="city"
+              variant="filter"
+              disabled={!filterProvince}
+              className="min-w-[150px]"
+            />
             {/* Search */}
             <div className="flex items-center gap-2 px-3 py-2 bg-white/[0.05] border border-white/[0.08] rounded-xl hover:border-emerald-500/30 focus-within:border-emerald-500/40 focus-within:ring-2 focus-within:ring-emerald-500/20 transition-all flex-1 min-w-[160px] max-w-[220px]">
               <i className="fas fa-magnifying-glass text-gray-500 text-[11px] flex-shrink-0"/>
@@ -843,7 +873,7 @@ export default function PbDashboard() {
                               <i className="fas fa-circle-dollar-sign text-emerald-500 text-[10px]"/>Rp {Number(app.nominal_paid).toLocaleString('id-ID')}
                             </span>
                           : <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-white/[0.04] border border-white/[0.06] text-gray-500 text-[11px] font-medium rounded-full"><i className="fas fa-clock text-[10px]"/>Belum ada</span>}
-                        <FileLink path={app.payment_proof_path} label="Bukti"/>
+                        <FileLink path={app.payment_proof_path} label="Bukti" onPreview={(url, lbl) => setDocPreview({ show: true, url, title: lbl })}/>
                       </div>
                     </td>
                     {/* File KTA */}
@@ -854,10 +884,10 @@ export default function PbDashboard() {
                           { label:'PD', path: app.generated_kta_file_path_pengda },
                           { label:'PB', path: app.generated_kta_file_path_pb     },
                         ].map(f => f.path
-                          ? <a key={f.label} href={fileUrl(f.path)} target="_blank" rel="noreferrer"
-                              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-blue-500 text-white text-[11px] font-bold shadow-sm hover:bg-blue-600 hover:shadow-md active:scale-[0.97] transition-all">
+                          ? <button key={f.label} type="button" onClick={() => setDocPreview({ show: true, url: fileUrl(f.path), title: `KTA ${f.label}` })}
+                              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-blue-500 text-white text-[11px] font-bold shadow-sm hover:bg-blue-600 hover:shadow-md active:scale-[0.97] transition-all cursor-pointer">
                               <i className="fas fa-file-pdf text-[9px]"/>{f.label}
-                            </a>
+                            </button>
                           : <span key={f.label} className="inline-flex items-center px-2.5 py-1 rounded-full bg-white/[0.04] border border-white/[0.06] text-gray-500 text-[11px] font-bold">{f.label}</span>
                         )}
                       </div>
@@ -892,9 +922,20 @@ export default function PbDashboard() {
                         ) : (
                           <span className="text-gray-400 text-xs">—</span>
                         )}
-                        <button type="button" onClick={()=>setDetailModal({show:true,app})} title="Detail"
+                        <button type="button" onClick={()=>{setSelectedAppId(app.id);setActiveSection('kta_detail');}} title="Detail"
                           className="w-7 h-7 flex items-center justify-center rounded-xl bg-white/[0.05] border border-white/[0.08] text-gray-400 hover:bg-white/[0.08] hover:border-white/[0.12] hover:text-white active:scale-[0.97] transition-all">
                           <i className="fas fa-eye text-[10px]"/>
+                        </button>
+                        {['approved_pb','kta_issued'].includes(app.status) && (
+                          <button type="button" onClick={()=>handleRegenerateKta(app.id)} title="Generate Ulang KTA"
+                            disabled={regeneratingKtaId===app.id}
+                            className="w-7 h-7 flex items-center justify-center rounded-xl bg-blue-500/10 border border-blue-500/20 text-blue-400 hover:bg-blue-500/20 hover:border-blue-500/30 hover:text-blue-300 active:scale-[0.97] transition-all disabled:opacity-50 disabled:cursor-not-allowed">
+                            <i className={`fas fa-rotate text-[10px] ${regeneratingKtaId===app.id ? 'animate-spin' : ''}`}/>
+                          </button>
+                        )}
+                        <button type="button" onClick={()=>setDeleteKtaConfirm({show:true, id:app.id, name:app.club_name||`#${app.id}`})} title="Hapus"
+                          className="w-7 h-7 flex items-center justify-center rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 hover:bg-red-500/20 hover:border-red-500/30 hover:text-red-300 active:scale-[0.97] transition-all">
+                          <i className="fas fa-trash text-[10px]"/>
                         </button>
                       </div>
                     </td>
@@ -953,16 +994,21 @@ export default function PbDashboard() {
                     </Td>
                     <Td>
                       <div className="flex gap-1.5">
-                        <Link to={`/pb/kta/${kta.id}`} title="Lihat Detail"
+                        <button type="button" onClick={()=>{setSelectedAppId(kta.id);setActiveSection('kta_detail');}} title="Lihat Detail"
                           className="w-8 h-8 rounded-xl bg-blue-500 text-white flex items-center justify-center shadow-sm shadow-blue-500/25 hover:bg-blue-600 hover:shadow-md active:scale-[0.97] transition-all">
                           <i className="fas fa-eye text-xs"/>
-                        </Link>
+                        </button>
                         {kta.generated_kta_file_path_pb&&(
-                          <a href={fileUrl(kta.generated_kta_file_path_pb)} target="_blank" rel="noreferrer" title="Download KTA"
-                            className="w-8 h-8 rounded-xl bg-emerald-500 text-white flex items-center justify-center shadow-sm shadow-emerald-500/25 hover:bg-emerald-600 hover:shadow-md active:scale-[0.97] transition-all">
+                          <button type="button" onClick={() => setDocPreview({ show: true, url: fileUrl(kta.generated_kta_file_path_pb), title: 'KTA PDF' })} title="Lihat KTA"
+                            className="w-8 h-8 rounded-xl bg-emerald-500 text-white flex items-center justify-center shadow-sm shadow-emerald-500/25 hover:bg-emerald-600 hover:shadow-md active:scale-[0.97] transition-all cursor-pointer">
                             <i className="fas fa-file-pdf text-xs"/>
-                          </a>
+                          </button>
                         )}
+                        <button type="button" onClick={()=>handleRegenerateKta(kta.id)} title="Generate Ulang KTA"
+                          disabled={regeneratingKtaId===kta.id}
+                          className="w-8 h-8 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-400 flex items-center justify-center hover:bg-amber-500/20 hover:border-amber-500/30 hover:text-amber-300 active:scale-[0.97] transition-all disabled:opacity-50 disabled:cursor-not-allowed">
+                          <i className={`fas fa-rotate text-xs ${regeneratingKtaId===kta.id ? 'animate-spin' : ''}`}/>
+                        </button>
                       </div>
                     </Td>
                   </tr>
@@ -983,13 +1029,21 @@ export default function PbDashboard() {
         {/* Filter Periode */}
         <div className="flex items-center gap-3 flex-wrap px-5 py-4 bg-[#141620] border border-white/[0.06] rounded-2xl">
           <span className="flex items-center gap-2 text-[11px] font-bold text-gray-500 uppercase tracking-widest"><i className="fas fa-calendar text-emerald-500"/>Periode</span>
-          <select value={saldoFilterMonth} onChange={e=>setSaldoFilterMonth(e.target.value)} className={SELECT}>
-            <option value="">Semua Bulan</option>
-            {Array.from({length:12},(_,i)=><option key={i+1} value={i+1}>{new Date(0,i).toLocaleString('id-ID',{month:'long'})}</option>)}
-          </select>
-          <select value={saldoFilterYear} onChange={e=>setSaldoFilterYear(e.target.value)} className={SELECT}>
-            {Array.from({length:5},(_,i)=>{const y=new Date().getFullYear()-2+i;return<option key={y} value={y}>{y}</option>;})}
-          </select>
+          <CustomSelect
+            value={saldoFilterMonth}
+            onChange={v=>setSaldoFilterMonth(v)}
+            options={[{value:'',label:'Semua Bulan'},...Array.from({length:12},(_,i)=>({value:String(i+1),label:new Date(0,i).toLocaleString('id-ID',{month:'long'})}))]} 
+            placeholder="Semua Bulan"
+            variant="filter"
+            className="min-w-[150px]"
+          />
+          <CustomSelect
+            value={saldoFilterYear}
+            onChange={v=>setSaldoFilterYear(v)}
+            options={Array.from({length:5},(_,i)=>{const y=new Date().getFullYear()-2+i;return{value:String(y),label:String(y)};})} 
+            variant="filter"
+            className="min-w-[100px]"
+          />
           <BtnGhost onClick={()=>{setSaldoFilterMonth('');setSaldoFilterYear(String(new Date().getFullYear()));}} sm>Reset</BtnGhost>
         </div>
 
@@ -1057,24 +1111,29 @@ export default function PbDashboard() {
               <form onSubmit={handleRecapSubmit} className="space-y-4">
                 <div>
                   <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1.5">Tipe Penerima</label>
-                  <select value={recapForm.recipient_type} onChange={e=>setRecapForm(f=>({...f,recipient_type:e.target.value,recipient_user_id:''}))} className={INPUT_SEL}>
-                    <option value="pengda">Pengda</option>
-                    <option value="pengcab">Pengcab</option>
-                  </select>
+                  <CustomSelect
+                    value={recapForm.recipient_type}
+                    onChange={v=>setRecapForm(f=>({...f,recipient_type:v,recipient_user_id:''}))}
+                    options={[{value:'pengda',label:'Pengda'},{value:'pengcab',label:'Pengcab'}]}
+                  />
                 </div>
                 <div>
                   <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1.5">Penerima</label>
-                  <select value={recapForm.recipient_user_id} onChange={e=>setRecapForm(f=>({...f,recipient_user_id:e.target.value}))} className={INPUT_SEL}>
-                    <option value="">— Pilih —</option>
-                    {filteredRecipients.map(u=><option key={u.id} value={u.id}>{u.club_name||u.username}</option>)}
-                  </select>
+                  <CustomSelect
+                    value={recapForm.recipient_user_id}
+                    onChange={v=>setRecapForm(f=>({...f,recipient_user_id:v}))}
+                    options={[{value:'',label:'— Pilih —'},...filteredRecipients.map(u=>({value:String(u.id),label:u.club_name||u.username}))]}
+                    placeholder="— Pilih —"
+                  />
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1.5">Bulan</label>
-                    <select value={recapForm.recap_month} onChange={e=>setRecapForm(f=>({...f,recap_month:e.target.value}))} className={INPUT_SEL}>
-                      {Array.from({length:12},(_,i)=><option key={i+1} value={i+1}>{new Date(0,i).toLocaleString('id-ID',{month:'long'})}</option>)}
-                    </select>
+                    <CustomSelect
+                      value={recapForm.recap_month}
+                      onChange={v=>setRecapForm(f=>({...f,recap_month:v}))}
+                      options={Array.from({length:12},(_,i)=>({value:String(i+1),label:new Date(0,i).toLocaleString('id-ID',{month:'long'})}))}
+                    />
                   </div>
                   <div>
                     <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1.5">Tahun</label>
@@ -1150,10 +1209,14 @@ export default function PbDashboard() {
     <Panel>
       <PanelHeader icon="fa-users" grad="from-blue-500 to-blue-600" title="Manajemen Pengguna" subtitle={`${userPagination.total||0} pengguna terdaftar`}
         actions={<>
-          <select value={userRoleFilter} onChange={e=>setUserRoleFilter(e.target.value)} className={SELECT}>
-            <option value="">Semua Role</option>
-            {Object.entries(ROLE_LABELS).map(([id,lbl])=><option key={id} value={id}>{lbl}</option>)}
-          </select>
+          <CustomSelect
+            value={userRoleFilter}
+            onChange={v=>setUserRoleFilter(v)}
+            options={[{value:'',label:'Semua Role'},...Object.entries(ROLE_LABELS).map(([id,lbl])=>({value:id,label:lbl}))]}
+            placeholder="Semua Role"
+            variant="filter"
+            className="min-w-[130px]"
+          />
           <div className="relative">
             <i className="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs"/>
             <input type="text" value={userSearch} onChange={e=>setUserSearch(e.target.value)}
@@ -1294,78 +1357,27 @@ export default function PbDashboard() {
       {activeSection==='kejurnas'    && <KejurnasManage embedded />}
       {activeSection==='kta_config'  && <KtaConfigPage embedded />}
       {activeSection==='daftar_ulang' && <ManageReregistration embedded />}
+      {activeSection==='kta_detail' && selectedAppId && (
+        <KtaDetailPanel
+          appId={selectedAppId}
+          onBack={()=>{setActiveSection('kta');setSelectedAppId(null);}}
+          onStatusUpdated={()=>fetchKtaData(ktaPagination.page)}
+        />
+      )}
 
       {/* Modals */}
       <ConfirmModal show={rejectModal.show} title="Tolak Pengajuan KTA?" message="Masukkan alasan penolakan."
         onConfirm={handleRejectConfirm} onCancel={()=>{setRejectModal({show:false,id:null});setRejectReason('');}}
         danger confirmText="Tolak" showReason reason={rejectReason} onReasonChange={setRejectReason} reasonLabel="Alasan *"/>
+      <ConfirmModal show={deleteKtaConfirm.show} title="Hapus Pengajuan KTA?" message={`Yakin ingin menghapus pengajuan KTA "${deleteKtaConfirm.name}"? Semua data dan file terkait akan dihapus permanen.`}
+        onConfirm={handleDeleteKta} onCancel={()=>setDeleteKtaConfirm({show:false,id:null,name:''})} danger confirmText="Hapus" loading={deleteKtaLoading}/>
 
-      {/* Detail Modal */}
-      {detailModal.show && detailModal.app && (() => {
-        const a = detailModal.app;
-        const rows = [
-          { label:'ID Pengajuan', value: <span className="font-mono text-xs text-gray-400">#{a.id}</span> },
-          { label:'Ketua / PIC',  value: a.leader_name || a.username || '—' },
-          { label:'Email',        value: a.email || '—' },
-          { label:'Telepon',      value: a.phone || '—' },
-          { label:'Alamat Klub',  value: a.club_address || '—' },
-        ];
-        const docs = [
-          { label:'Logo',   path: a.logo_path },
-          { label:'AD',     path: a.ad_file_path },
-          { label:'ART',    path: a.art_file_path },
-          { label:'SK',     path: a.sk_file_path },
-        ];
-        return (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={()=>setDetailModal({show:false,app:null})}>
-            <div className="absolute inset-0 bg-black/60 backdrop-blur-sm"/>
-            <div className="relative w-full max-w-md bg-[#141620] border border-white/[0.06] rounded-2xl shadow-2xl overflow-hidden" onClick={e=>e.stopPropagation()}>
-              {/* Header */}
-              <div className="flex items-center justify-between px-5 py-4 border-b border-white/[0.06]">
-                <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shadow-lg">
-                    <i className="fas fa-info text-white text-sm"/>
-                  </div>
-                  <div>
-                    <h3 className="m-0 text-sm font-bold text-white leading-tight">{a.club_name}</h3>
-                    <p className="m-0 mt-0.5 text-[11px] text-gray-500">Detail Pengajuan KTA</p>
-                  </div>
-                </div>
-                <button type="button" onClick={()=>setDetailModal({show:false,app:null})}
-                  className="w-8 h-8 flex items-center justify-center rounded-xl bg-white/[0.05] text-gray-400 hover:bg-white/[0.08] hover:text-white transition-all">
-                  <i className="fas fa-times text-xs"/>
-                </button>
-              </div>
-              {/* Info rows */}
-              <div className="p-5 space-y-2.5">
-                {rows.map(r=>(
-                  <div key={r.label} className="flex items-start justify-between gap-3 py-2 border-b border-white/[0.06] last:border-0">
-                    <span className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide whitespace-nowrap">{r.label}</span>
-                    <span className="text-sm text-gray-300 text-right">{r.value}</span>
-                  </div>
-                ))}
-                {/* Dokumen */}
-                <div className="pt-1">
-                  <p className="text-[11px] font-bold text-gray-500 uppercase tracking-widest mb-2">Dokumen</p>
-                  <div className="flex flex-wrap gap-2">
-                    {docs.map(d=>(
-                      <FileLink key={d.label} path={d.path} label={d.label}/>
-                    ))}
-                  </div>
-                </div>
-              </div>
-              {/* Footer */}
-              <div className="px-5 py-3.5 border-t border-white/[0.06] flex justify-end">
-                <BtnGhost sm onClick={()=>setDetailModal({show:false,app:null})}>Tutup</BtnGhost>
-              </div>
-            </div>
-          </div>
-        );
-      })()}
+
       <ConfirmModal show={deleteConfirm.show} title="Hapus Pengguna?" message={`Yakin ingin menghapus "${deleteConfirm.name}"? Tindakan ini tidak bisa dibatalkan.`}
         onConfirm={handleDeleteUser} onCancel={()=>setDeleteConfirm({show:false,id:null,name:''})} danger confirmText="Hapus"/>
       <ConfirmModal show={resetConfirm.show} title="Reset Password?" message={`Reset password "${resetConfirm.name}" ke password default?`}
         onConfirm={handleResetPassword} onCancel={()=>setResetConfirm({show:false,id:null,name:''})} confirmText="Reset"/>
+      <DocumentPreviewModal show={docPreview.show} url={docPreview.url} title={docPreview.title} onClose={() => setDocPreview({ show: false, url: '', title: '' })} />
       </div>
     </SidebarLayout>
   );

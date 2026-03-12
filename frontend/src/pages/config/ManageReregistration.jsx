@@ -3,6 +3,7 @@ import api from '../../services/api';
 import DashboardLayout from '../../components/layout/DashboardLayout';
 import { Pagination } from '../../components/layout/MainLayout';
 import toast from 'react-hot-toast';
+import DocumentPreviewModal from '../../components/common/DocumentPreviewModal';
 
 const PER_PAGE = 10;
 
@@ -33,6 +34,7 @@ export default function ManageReregistration({ embedded }) {
   const [modal, setModal] = useState({ show: false, id: null, action: '' });
   const [processing, setProcessing] = useState(false);
   const [page, setPage] = useState(1);
+  const [docPreview, setDocPreview] = useState({ show: false, url: '', title: '' });
 
   useEffect(() => { setPage(1); loadData(); }, [filter]);
 
@@ -142,10 +144,10 @@ export default function ManageReregistration({ embedded }) {
                     <td className="px-4 py-3"><Badge status={item.status} /></td>
                     <td className="px-4 py-3">
                       {item.document_path ? (
-                        <a href={`${API_BASE}/uploads/${item.document_path}`} target="_blank" rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1.5 text-xs text-emerald-400 hover:text-emerald-300 font-medium">
+                        <button type="button" onClick={() => setDocPreview({ show: true, url: `${API_BASE}/uploads/${item.document_path}`, title: 'Dokumen Pendaftaran' })}
+                          className="inline-flex items-center gap-1.5 text-xs text-emerald-400 hover:text-emerald-300 font-medium cursor-pointer bg-transparent border-none">
                           <i className="fas fa-file-alt text-[10px]" /> Lihat
-                        </a>
+                        </button>
                       ) : <span className="text-gray-400 text-xs">-</span>}
                     </td>
                     <td className="px-4 py-3">
@@ -212,6 +214,7 @@ export default function ManageReregistration({ embedded }) {
           </div>
         </div>
       )}
+      <DocumentPreviewModal show={docPreview.show} url={docPreview.url} title={docPreview.title} onClose={() => setDocPreview({ show: false, url: '', title: '' })} />
     </div>
   );
 

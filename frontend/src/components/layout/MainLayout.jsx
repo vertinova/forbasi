@@ -2,6 +2,7 @@
  * MainLayout - Consistent wrapper for all dashboard content
  * Provides unified spacing, max-width, and responsive behavior
  */
+import CustomSelect from '../common/CustomSelect';
 
 // =============================================================================
 // SECTION WRAPPER - For grouping related content
@@ -295,7 +296,22 @@ export function FilterInput({ icon, placeholder, value, onChange, className = ''
   );
 }
 
-export function FilterSelect({ icon, value, onChange, children, className = '', disabled = false }) {
+export function FilterSelect({ icon, value, onChange, children, options, className = '', disabled = false }) {
+  // If options array is provided, use CustomSelect
+  if (options) {
+    return (
+      <CustomSelect
+        value={value}
+        onChange={v => onChange({ target: { value: v } })}
+        options={options}
+        icon={icon}
+        variant="filter"
+        disabled={disabled}
+        className={className}
+      />
+    );
+  }
+  // Fallback: render children as native select (backward compat)
   return (
     <div className={`flex items-center gap-2 px-3 py-2 bg-white/[0.05] border rounded-xl transition-all ${
       disabled 

@@ -4,6 +4,7 @@
  */
 
 import { Link } from 'react-router-dom';
+import CustomSelect from './CustomSelect';
 
 // Color constants
 const COLORS = {
@@ -267,17 +268,13 @@ export const FormInput = ({ label, type = 'text', placeholder, value, onChange, 
 export const FormSelect = ({ label, value, onChange, options = [], placeholder = 'Pilih...', ...props }) => (
   <div>
     {label && <label className="block text-xs font-medium text-slate-400 mb-1.5">{label}</label>}
-    <select
+    <CustomSelect
       value={value}
-      onChange={onChange}
-      className="w-full px-4 pr-8 py-2.5 bg-slate-900/50 border border-slate-700 rounded-xl text-sm text-white focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/20 transition-all cursor-pointer"
+      onChange={v => onChange({ target: { value: v } })}
+      options={options.map(opt => ({ value: opt.value, label: opt.label }))}
+      placeholder={placeholder}
       {...props}
-    >
-      <option value="">{placeholder}</option>
-      {options.map((opt, idx) => (
-        <option key={idx} value={opt.value}>{opt.label}</option>
-      ))}
-    </select>
+    />
   </div>
 );
 

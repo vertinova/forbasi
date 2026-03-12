@@ -16,7 +16,8 @@ const QRCode = require('qrcode');
 const path = require('path');
 const fs = require('fs');
 const crypto = require('crypto');
-const db = require('../lib/db-compat');
+const { imageSize } = require('image-size');
+const db = require('../config/database');
 
 const UPLOADS = path.join(__dirname, '../../uploads');
 
@@ -190,7 +191,17 @@ const ID_MONTHS = ['', 'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
 
 const formatDateID = (dateStr) => {
   const d = dateStr ? new Date(dateStr) : new Date();
+  if (isNaN(d.getTime())) {
+    const fallback = new Date();
+    return `${String(fallback.getDate()).padStart(2, '0')} ${ID_MONTHS[fallback.getMonth() + 1]} ${fallback.getFullYear()}`;
+  }
   return `${String(d.getDate()).padStart(2, '0')} ${ID_MONTHS[d.getMonth() + 1]} ${d.getFullYear()}`;
+};
+
+const safeYear = (dateStr) => {
+  if (!dateStr) return new Date().getFullYear();
+  const d = new Date(dateStr);
+  return isNaN(d.getTime()) ? new Date().getFullYear() : d.getFullYear();
 };
 
 // mm → PDFKit points (72 dpi, 1 inch = 25.4mm)
@@ -206,17 +217,52 @@ const loadRoleConfig = async (tableName, userId) => {
 };
 
 // Resolve file path relative to UPLOADS, return null if not found
+// Also checks PHP legacy uploads path and downloads from production as fallback
+const PHP_UPLOADS = path.join(__dirname, '../../../php/forbasi/php/uploads');
+const PROD_UPLOADS_URL = 'https://forbasi.or.id/forbasi/php/uploads';
+
+const downloadFileSync = (url, destPath) => {
+  try {
+    const { execSync } = require('child_process');
+    const dir = path.dirname(destPath);
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+    // Cross-platform download: try curl first (Linux/Mac/Win10+), fallback to powershell (Windows)
+    try {
+      execSync(`curl -fsSL -o "${destPath}" "${url}"`, { timeout: 15000, stdio: 'pipe' });
+    } catch {
+      execSync(`powershell -Command "Invoke-WebRequest -Uri '${url}' -OutFile '${destPath}' -UseBasicParsing -ErrorAction Stop"`, { timeout: 15000, stdio: 'pipe' });
+    }
+    return fs.existsSync(destPath) && fs.statSync(destPath).size > 0;
+  } catch {
+    if (fs.existsSync(destPath)) fs.unlinkSync(destPath);
+    return false;
+  }
+};
+
 const resolveUploadPath = (relPath) => {
   if (!relPath) return null;
   const full = path.join(UPLOADS, relPath);
-  return fs.existsSync(full) ? full : null;
+  if (fs.existsSync(full)) return full;
+  // Fallback: check PHP legacy uploads directory
+  const phpFull = path.join(PHP_UPLOADS, relPath);
+  if (fs.existsSync(phpFull)) return phpFull;
+  // Fallback: download from production server and cache locally
+  const prodUrl = `${PROD_UPLOADS_URL}/${relPath.replace(/\\/g, '/')}`;
+  console.log(`[KTA PDF] Attempting download: ${prodUrl} -> ${full}`);
+  if (downloadFileSync(prodUrl, full)) {
+    console.log(`[KTA PDF] Successfully cached: ${full}`);
+    return full;
+  }
+  console.warn(`[KTA PDF] File not found locally or on production: ${relPath}`);
+  return null;
 };
 
 // Draw a scaled image centred in a box (maintains aspect ratio, fits within maxW×maxH)
 const drawImageFit = (doc, imgPath, cx, y, maxW, maxH) => {
   if (!imgPath || !fs.existsSync(imgPath)) return;
   try {
-    const { width: iw, height: ih } = require('image-size')(imgPath);
+    const buf = fs.readFileSync(imgPath);
+    const { width: iw, height: ih } = imageSize(buf);
     if (!iw || !ih) return;
     let w = maxW, h = (ih / iw) * maxW;
     if (h > maxH) { h = maxH; w = (iw / ih) * maxH; }
@@ -303,17 +349,10 @@ const generateKtaPdf = async (application, options = {}) => {
       doc.rect(0, 0, PW, PH).fill('#ffffff');
     }
 
-    // ── Title ─────────────────────────────────────────────────────
-    const titleY = mm(70);
-    doc.font('Helvetica-Bold').fontSize(24).fillColor('black')
-      .text('KARTU TANDA ANGGOTA', 0, titleY, { align: 'center', width: PW });
-    doc.font('Helvetica-Bold').fontSize(16)
-      .text('FORUM BARIS INDONESIA', 0, titleY + mm(12), { align: 'center', width: PW });
+    // ── Title text is part of the background image — not drawn programmatically ──
 
     // ── Member info block ─────────────────────────────────────────
-    // Mirrors PHP: SetY(GetY() + $offset_8vh) after the two title lines
-    // title cell height=12mm → Y=82mm, sub-title height=8mm → Y=90mm, +offset_8vh ≈ +13.977mm → ~104mm
-    const infoStartY = mm(70) + mm(12) + mm(8) + offset8vh;
+    const infoStartY = mm(108);
     const infoX = mm(55);
     const labelW = mm(45);
     const valueX = infoX + labelW + mm(5);
@@ -351,9 +390,7 @@ const generateKtaPdf = async (application, options = {}) => {
     infoRow('SEJAK TANGGAL', formatDateID(approvedDateCol).toUpperCase());
 
     // NOMOR ANGGOTA
-    const approvedYear = approvedDateCol
-      ? new Date(approvedDateCol).getFullYear()
-      : new Date().getFullYear();
+    const approvedYear = safeYear(approvedDateCol);
     const cityAbbr = getCityAbbr(application.city_name || '');
     const memberNum = `0${String(application.id).padStart(3, '0')}/FORBASI/${cityAbbr}/${approvedYear}`;
     doc.font('Helvetica-Bold').fontSize(11).fillColor('black');
@@ -497,7 +534,7 @@ const generateKtaPdf = async (application, options = {}) => {
       }
 
       // Expiry footer
-      const pbYear = new Date(pbApprovedDate).getFullYear();
+      const pbYear = safeYear(pbApprovedDate);
       doc.font('Helvetica-Oblique').fontSize(9).fillColor('#646464')
         .text(`KTA ini berlaku sampai dengan 31 Desember ${pbYear}`, 0, PH - mm(15), { align: 'center', width: PW });
     }

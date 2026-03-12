@@ -5,7 +5,7 @@ const { LicenseEvent } = require('../models/Common');
 exports.submitApplication = async (req, res) => {
   try {
     const userId = req.user.id;
-    const { nama_lengkap, alamat, email, no_telepon, jenis_lisensi, biaya_lisensi } = req.body;
+    const { nama_lengkap, alamat, email, no_telepon, jenis_lisensi, biaya_lisensi, akomodasi } = req.body;
     const files = req.files || {};
 
     if (!nama_lengkap || !alamat || !email || !no_telepon || !jenis_lisensi) {
@@ -16,6 +16,12 @@ exports.submitApplication = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Jenis lisensi tidak valid' });
     }
 
+    const denganKamar = akomodasi === 'dengan_kamar';
+    const hitungBiaya = () => {
+      if (jenis_lisensi === 'pelatih') return denganKamar ? 1000000 : 750000;
+      return denganKamar ? 2250000 : 2000000;
+    };
+
     const appData = {
       user_id: userId,
       nama_lengkap,
@@ -23,7 +29,8 @@ exports.submitApplication = async (req, res) => {
       email,
       no_telepon,
       jenis_lisensi,
-      biaya_lisensi: biaya_lisensi || (jenis_lisensi === 'pelatih' ? 750000 : 2000000),
+      akomodasi: akomodasi || 'tanpa_kamar',
+      biaya_lisensi: biaya_lisensi || hitungBiaya(),
       status: 'pending',
       submitted_at: new Date().toISOString().slice(0, 19).replace('T', ' ')
     };

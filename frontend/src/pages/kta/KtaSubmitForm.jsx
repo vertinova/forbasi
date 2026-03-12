@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import api from '../../services/api';
 import toast from 'react-hot-toast';
+import CustomSelect from '../../components/common/CustomSelect';
 
 const INP = 'w-full px-3.5 py-2.5 text-sm bg-white/[0.05] border border-white/[0.08] text-gray-200 placeholder-gray-500 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500/50 transition-all';
 const SEL = INP + ' pr-8 cursor-pointer';
@@ -28,14 +29,44 @@ export default function KtaSubmitForm({ onSuccess }) {
     } else { setCities([]); }
   }, [formData.province_id]);
 
-  const handleChange = (e) => setFormData(p => ({ ...p, [e.target.name]: e.target.value }));
-  const handleFile = (e) => setFiles(p => ({ ...p, [e.target.name]: e.target.files[0] }));
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    if (name === 'phone') {
+      const digits = value.replace(/[^0-9]/g, '');
+      return setFormData(p => ({ ...p, phone: digits }));
+    }
+    setFormData(p => ({ ...p, [name]: value }));
+  };
+
+  const MAX_FILE_SIZE = 2 * 1024 * 1024; // 2MB
+
+  const handleFile = (e) => {
+    const file = e.target.files[0];
+    if (file && file.size > MAX_FILE_SIZE) {
+      toast.error(`File "${file.name}" terlalu besar (${(file.size / 1024 / 1024).toFixed(1)}MB). Maksimal 2MB.`);
+      e.target.value = '';
+      return;
+    }
+    setFiles(p => ({ ...p, [e.target.name]: file || null }));
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!formData.club_name || !formData.province_id || !formData.city_id || !files.sk_file || !files.payment_proof) {
-      return toast.error('Lengkapi semua field wajib');
+
+    // Detailed field validation
+    const missing = [];
+    if (!formData.club_name) missing.push('Nama Klub');
+    if (!formData.province_id) missing.push('Provinsi');
+    if (!formData.city_id) missing.push('Kota/Kabupaten');
+    if (!files.sk_file) missing.push('SK Pendirian Klub');
+    if (!files.payment_proof) missing.push('Bukti Pembayaran');
+    if (missing.length > 0) {
+      return toast.error(`Field wajib belum diisi: ${missing.join(', ')}`);
     }
+    if (formData.phone && !/^[0-9]+$/.test(formData.phone)) {
+      return toast.error('No. HP hanya boleh berisi angka');
+    }
+
     setSubmitting(true);
     try {
       const fd = new FormData();
@@ -44,7 +75,25 @@ export default function KtaSubmitForm({ onSuccess }) {
       await api.post('/kta/submit', fd, { headers: { 'Content-Type': 'multipart/form-data' } });
       toast.success('Pengajuan KTA berhasil dikirim!');
       if (onSuccess) onSuccess();
-    } catch (err) { toast.error(err.response?.data?.message || 'Gagal mengirim pengajuan'); }
+    } catch (err) {
+      console.error('=== KTA SUBMIT ERROR ===');
+      console.error('Status:', err.response?.status);
+      console.error('Data:', err.response?.data);
+      console.error('Message:', err.message);
+      console.error('Full error:', err);
+
+      const msg = err.response?.data?.message;
+      const status = err.response?.status;
+      if (msg) {
+        toast.error(msg);
+      } else if (status) {
+        toast.error(`Gagal mengirim pengajuan (error ${status})`);
+      } else if (err.request) {
+        toast.error('Tidak dapat terhubung ke server. Periksa koneksi internet Anda.');
+      } else {
+        toast.error('Terjadi kesalahan. Silakan coba lagi.');
+      }
+    }
     finally { setSubmitting(false); }
   };
 
@@ -65,24 +114,30 @@ export default function KtaSubmitForm({ onSuccess }) {
         <div className="grid grid-cols-2 gap-3">
           <div>
             <label className={LBL}>Provinsi *</label>
-            <select className={SEL} name="province_id" value={formData.province_id} onChange={handleChange} required>
-              <option value="">Pilih</option>
-              {provinces.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-            </select>
+            <CustomSelect
+              value={formData.province_id}
+              onChange={v => setFormData(p => ({ ...p, province_id: v, city_id: '' }))}
+              options={[{value:'',label:'Pilih'},...provinces.map(p => ({value:String(p.id),label:p.name}))]}
+              placeholder="Pilih"
+            />
           </div>
           <div>
             <label className={LBL}>Kota/Kabupaten *</label>
-            <select className={SEL} name="city_id" value={formData.city_id} onChange={handleChange} required>
-              <option value="">Pilih</option>
-              {cities.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-            </select>
+            <CustomSelect
+              value={formData.city_id}
+              onChange={v => setFormData(p => ({ ...p, city_id: v }))}
+              options={[{value:'',label:'Pilih'},...cities.map(c => ({value:String(c.id),label:c.name}))]}
+              placeholder="Pilih"
+              disabled={!formData.province_id}
+            />
           </div>
         </div>
 
         {/* Alamat */}
         <div>
           <label className={LBL}>Alamat Sekretariat</label>
-          <textarea className={`${INP} resize-none`} name="club_address" value={formData.club_address} onChange={handleChange} rows={2} placeholder="Alamat lengkap" />
+          <textarea className={`${INP} resize-none`} name="club_address" value={formData.club_address} onChange={handleChange} rows={2} placeholder="Alamat lengkap" maxLength={45} />
+          <p className="text-[11px] text-gray-500 mt-1 text-right">{formData.club_address.length}/45</p>
         </div>
 
         {/* Ketua + Sekolah */}
@@ -113,7 +168,7 @@ export default function KtaSubmitForm({ onSuccess }) {
         <div className="grid grid-cols-2 gap-3">
           <div>
             <label className={LBL}>No. HP</label>
-            <input className={INP} name="phone" value={formData.phone} onChange={handleChange} type="tel" />
+            <input className={INP} name="phone" value={formData.phone} onChange={handleChange} type="tel" inputMode="numeric" placeholder="08xxxxxxxxxx" />
           </div>
           <div>
             <label className={LBL}>Nominal Bayar</label>
@@ -169,8 +224,16 @@ export default function KtaSubmitForm({ onSuccess }) {
             { name: 'payment_proof', label: 'Bukti Pembayaran *', accept: '.jpg,.jpeg,.png,.pdf', required: true },
           ].map(f => (
             <div key={f.name} className="bg-white/[0.02] rounded-xl border border-white/[0.04] p-3">
-              <label className="block text-[11px] font-semibold text-gray-400 mb-2">{f.label}</label>
+              <div className="flex items-center justify-between mb-2">
+                <label className="text-[11px] font-semibold text-gray-400">{f.label}</label>
+                <span className="text-[10px] text-gray-600">Maks 2MB · JPG, PNG{f.accept.includes('.pdf') ? ', PDF' : ''}</span>
+              </div>
               <input type="file" className={FILE_INP} name={f.name} accept={f.accept} onChange={handleFile} required={f.required} />
+              {files[f.name] && (
+                <p className="text-[10px] text-emerald-400/70 mt-1.5 m-0">
+                  <i className="fas fa-check-circle mr-1" />{files[f.name].name} ({(files[f.name].size / 1024 / 1024).toFixed(1)}MB)
+                </p>
+              )}
             </div>
           ))}
         </div>

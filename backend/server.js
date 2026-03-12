@@ -26,7 +26,15 @@ const app = express();
 const PORT = process.env.PORT || 5000;
 
 // Security middleware
-app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }));
+app.use(helmet({
+  crossOriginResourcePolicy: { policy: 'cross-origin' },
+  contentSecurityPolicy: {
+    directives: {
+      ...helmet.contentSecurityPolicy.getDefaultDirectives(),
+      'frame-ancestors': ["'self'", process.env.FRONTEND_URL || 'http://localhost:5173'],
+    },
+  },
+}));
 app.use(cors({
   origin: process.env.FRONTEND_URL || 'http://localhost:5173',
   credentials: true,
@@ -54,8 +62,44 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(cookieParser());
 
-// Static files (uploads)
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+// Static files (uploads) — auto-regenerate missing KTA PDFs
+app.use('/uploads', async (req, res, next) => {
+  // Only intercept generated_kta* PDF requests
+  const match = req.path.match(/^\/generated_kta(?:_pb|_pengda)?\/(KTA_(?:PB_|Pengcab_|Pengda_)?(.+?)_(\d+)\.pdf)$/i);
+  if (!match) return next();
+
+  const filePath = path.join(__dirname, 'uploads', req.path);
+  if (require('fs').existsSync(filePath)) return next();
+
+  // File missing — try to regenerate
+  try {
+    const appId = parseInt(match[3]);
+    const subDir = req.path.split('/')[1]; // generated_kta_pb, generated_kta_pengda, or generated_kta
+    const role = subDir === 'generated_kta_pb' ? 'pb' : subDir === 'generated_kta_pengda' ? 'pengda' : 'pengcab';
+    const db = require('./src/config/database');
+    const [rows] = await db.query(
+      `SELECT ka.*, u.club_name, u.username, p.name as province_name, c.name as city_name
+       FROM kta_applications ka
+       JOIN users u ON ka.user_id = u.id
+       LEFT JOIN provinces p ON ka.province_id = p.id
+       LEFT JOIN cities c ON ka.city_id = c.id
+       WHERE ka.id = ?`,
+      [appId]
+    );
+    if (!rows.length) return next();
+    const { generateKtaPdf } = require('./src/utils/pdfGenerator');
+    const result = await generateKtaPdf(rows[0], { role });
+    const KtaApplication = require('./src/models/KtaApplication');
+    const col = role === 'pb' ? 'generated_kta_file_path_pb'
+      : role === 'pengda' ? 'generated_kta_file_path_pengda'
+      : 'generated_kta_file_path';
+    await KtaApplication.update(appId, { [col]: result.filepath });
+    if (result.barcode_id) await KtaApplication.update(appId, { kta_barcode_unique_id: result.barcode_id });
+  } catch (err) {
+    console.error('Auto-regenerate KTA PDF failed:', err.message);
+  }
+  next();
+}, express.static(path.join(__dirname, 'uploads')));
 
 // API Routes
 app.use('/api/auth', authRoutes);
@@ -91,7 +135,8 @@ async function startServer() {
       console.log(`📍 Environment: ${process.env.NODE_ENV}`);
     });
   } catch (err) {
-    console.error('❌ Failed to start server:', err.message);
+    console.error('❌ Failed to start server:', err.message || err);
+    if (err.code) console.error('   Error code:', err.code);
     process.exit(1);
   }
 }

@@ -7,6 +7,7 @@ import api from '../../services/api';
 import { useAuth } from '../../hooks/useAuth';
 import toast from 'react-hot-toast';
 import { FiArrowLeft, FiCheck, FiX, FiDownload, FiFileText } from 'react-icons/fi';
+import DocumentPreviewModal from '../../components/common/DocumentPreviewModal';
 
 export default function KtaDetail() {
   const { id } = useParams();
@@ -16,6 +17,7 @@ export default function KtaDetail() {
   const [loading, setLoading] = useState(true);
   const [modal, setModal] = useState({ open: false, action: '', status: '' });
   const [rejectReason, setRejectReason] = useState('');
+  const [docPreview, setDocPreview] = useState({ show: false, url: '', title: '' });
 
   useEffect(() => {
     api.get(`/kta/applications/${id}`).then(r => setApp(r.data.data)).catch(() => toast.error('Data tidak ditemukan')).finally(() => setLoading(false));
@@ -118,24 +120,24 @@ export default function KtaDetail() {
             <h4 style={{ fontSize: '1rem', marginTop: '1.5rem' }}>Dokumen</h4>
             <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
               {app.sk_file_path && (
-                <a href={`${import.meta.env.VITE_API_URL}/uploads/${app.sk_file_path}`} target="_blank" rel="noreferrer" className="btn btn-secondary">
+                <button type="button" onClick={() => setDocPreview({ show: true, url: `${import.meta.env.VITE_API_URL}/uploads/${app.sk_file_path}`, title: 'SK Pendirian' })} className="btn btn-secondary" style={{ cursor: 'pointer' }}>
                   <FiFileText /> SK Pendirian
-                </a>
+                </button>
               )}
               {app.logo_path && (
-                <a href={`${import.meta.env.VITE_API_URL}/uploads/${app.logo_path}`} target="_blank" rel="noreferrer" className="btn btn-secondary">
+                <button type="button" onClick={() => setDocPreview({ show: true, url: `${import.meta.env.VITE_API_URL}/uploads/${app.logo_path}`, title: 'Logo Klub' })} className="btn btn-secondary" style={{ cursor: 'pointer' }}>
                   <FiFileText /> Logo Klub
-                </a>
+                </button>
               )}
               {app.payment_proof_path && (
-                <a href={`${import.meta.env.VITE_API_URL}/uploads/${app.payment_proof_path}`} target="_blank" rel="noreferrer" className="btn btn-secondary">
+                <button type="button" onClick={() => setDocPreview({ show: true, url: `${import.meta.env.VITE_API_URL}/uploads/${app.payment_proof_path}`, title: 'Bukti Pembayaran' })} className="btn btn-secondary" style={{ cursor: 'pointer' }}>
                   <FiFileText /> Bukti Pembayaran
-                </a>
+                </button>
               )}
               {app.ad_file_path && (
-                <a href={`${import.meta.env.VITE_API_URL}/uploads/${app.ad_file_path}`} target="_blank" rel="noreferrer" className="btn btn-secondary">
+                <button type="button" onClick={() => setDocPreview({ show: true, url: `${import.meta.env.VITE_API_URL}/uploads/${app.ad_file_path}`, title: 'AD/ART' })} className="btn btn-secondary" style={{ cursor: 'pointer' }}>
                   <FiFileText /> AD/ART
-                </a>
+                </button>
               )}
             </div>
 
@@ -234,6 +236,7 @@ export default function KtaDetail() {
             onCancel={() => setModal({ open: false, action: '', status: '' })}
           />
         ) : null}
+        <DocumentPreviewModal show={docPreview.show} url={docPreview.url} title={docPreview.title} onClose={() => setDocPreview({ show: false, url: '', title: '' })} />
       </div>
     </div>
   );

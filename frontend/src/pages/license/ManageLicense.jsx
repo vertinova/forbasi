@@ -3,6 +3,7 @@ import Navbar from '../../components/layout/Navbar';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
 import api from '../../services/api';
 import toast from 'react-hot-toast';
+import DocumentPreviewModal from '../../components/common/DocumentPreviewModal';
 
 const API_BASE = (import.meta.env.VITE_API_URL || 'http://localhost:5000/api').replace(/\/api$/, '');
 
@@ -27,6 +28,7 @@ export default function ManageLicense({ embedded }) {
   const [filterStatus, setFilterStatus] = useState('');
   const [search, setSearch] = useState('');
   const [detail, setDetail] = useState(null);
+  const [docPreview, setDocPreview] = useState({ show: false, url: '', title: '' });
 
   useEffect(() => { fetchData(); }, []);
 
@@ -206,10 +208,10 @@ export default function ManageLicense({ embedded }) {
                 </div>
               )}
               {detail.document && (
-                <a href={`${API_BASE}/uploads/license/${detail.document}`} target="_blank" rel="noreferrer"
-                  className="inline-flex items-center gap-2 px-3.5 py-1.5 text-xs rounded-xl bg-blue-500 text-white font-semibold shadow-sm hover:bg-blue-600 active:scale-[0.97] transition-all no-underline">
+                <button type="button" onClick={() => setDocPreview({ show: true, url: `${API_BASE}/uploads/license/${detail.document}`, title: 'Dokumen Lisensi' })}
+                  className="inline-flex items-center gap-2 px-3.5 py-1.5 text-xs rounded-xl bg-blue-500 text-white font-semibold shadow-sm hover:bg-blue-600 active:scale-[0.97] transition-all cursor-pointer border-none">
                   <i className="fas fa-file-alt" /> Lihat Dokumen
-                </a>
+                </button>
               )}
             </div>
             <div className="px-6 py-4 bg-white/[0.03] border-t border-white/[0.06] flex items-center gap-2 flex-wrap">
@@ -233,6 +235,7 @@ export default function ManageLicense({ embedded }) {
           </div>
         </div>
       )}
+      <DocumentPreviewModal show={docPreview.show} url={docPreview.url} title={docPreview.title} onClose={() => setDocPreview({ show: false, url: '', title: '' })} />
     </div>
   );
 

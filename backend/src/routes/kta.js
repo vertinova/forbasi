@@ -38,8 +38,10 @@ router.get('/activity-logs', authenticate, authorize(2, 3, 4), ktaController.get
 
 // KTA PDF generation & download
 router.post('/applications/:id/generate-pdf', authenticate, authorize(4), ktaController.generateKtaPdf);
-router.get('/applications/:id/download-pdf', authenticate, authorize(2, 3, 4), ktaController.downloadKtaPdf);
+router.post('/applications/:id/regenerate-all-pdfs', authenticate, authorize(4), ktaController.regenerateAllPdfs);
+router.get('/applications/:id/download-pdf', authenticate, authorize(1, 2, 3, 4), ktaController.downloadKtaPdf);
 router.post('/batch-regenerate', authenticate, authorize(4), ktaController.batchRegenerateKta);
+router.delete('/applications/:id', authenticate, authorize(4), ktaController.deleteApplication);
 
 // Public barcode verification
 router.get('/verify/:barcode_id', ktaController.getByBarcode);

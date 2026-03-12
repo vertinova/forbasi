@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import SidebarLayout from '../../components/layout/SidebarLayout';
+import CustomSelect from '../../components/common/CustomSelect';
+import KtaDetailPanel from '../../components/common/KtaDetailPanel';
+import DocumentPreviewModal from '../../components/common/DocumentPreviewModal';
 import api from '../../services/api';
 import toast from 'react-hot-toast';
 import ConfirmModal from '../../components/common/ConfirmModal';
@@ -48,6 +50,8 @@ export default function PengdaDashboard() {
   const [filterStatus, setFilterStatus] = useState('');
   const [confirm, setConfirm] = useState({ show: false });
   const [confirmReason, setConfirmReason] = useState('');
+  const [selectedAppId, setSelectedAppId] = useState(null);
+  const [docPreview, setDocPreview] = useState({ show: false, url: '', title: '' });
 
   // Members state
   const [members, setMembers] = useState([]);
@@ -150,15 +154,20 @@ export default function PengdaDashboard() {
         <form onSubmit={e => { e.preventDefault(); fetchData(); }} className="flex flex-wrap gap-3 items-end">
           <div className="flex-1 min-w-36">
             <label className="block text-[11px] font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Status</label>
-            <select className={SEL} value={filterStatus} onChange={e => setFilterStatus(e.target.value)}>
-              <option value="">Semua</option>
-              <option value="approved_pengcab">Menunggu Review</option>
-              <option value="resubmit_to_pengda">Diajukan Ulang dari Pengcab</option>
-              <option value="approved_pengda">Approved Pengda</option>
-              <option value="kta_issued">KTA Terbit</option>
-              <option value="rejected_pengda">Ditolak Pengda</option>
-              <option value="rejected_pb">Ditolak PB</option>
-            </select>
+            <CustomSelect
+              value={filterStatus}
+              onChange={v=>setFilterStatus(v)}
+              options={[
+                {value:'',label:'Semua'},
+                {value:'approved_pengcab',label:'Menunggu Review'},
+                {value:'resubmit_to_pengda',label:'Diajukan Ulang dari Pengcab'},
+                {value:'approved_pengda',label:'Approved Pengda'},
+                {value:'kta_issued',label:'KTA Terbit'},
+                {value:'rejected_pengda',label:'Ditolak Pengda'},
+                {value:'rejected_pb',label:'Ditolak PB'},
+              ]}
+              placeholder="Semua"
+            />
           </div>
           <div className="flex-1 min-w-36">
             <label className="block text-[11px] font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Cari Klub</label>
@@ -220,11 +229,11 @@ export default function PengdaDashboard() {
                     <td className="px-4 py-3">{badge(app.status)}</td>
                     <td className="px-4 py-3">
                       <div className="flex gap-1.5 flex-wrap">
-                        <Link to={`/pengda/kta/${app.id}`}
-                          className="w-8 h-8 flex items-center justify-center bg-blue-500/10 text-blue-400 hover:bg-blue-500/20 rounded-lg transition-colors text-xs"
+                        <button onClick={() => { setSelectedAppId(app.id); setActiveTab('kta-detail'); }}
+                          className="w-8 h-8 flex items-center justify-center bg-blue-500/10 text-blue-400 hover:bg-blue-500/20 rounded-lg border-none cursor-pointer transition-colors text-xs"
                           title="Detail">
                           <i className="fas fa-eye" />
-                        </Link>
+                        </button>
                         {app.status === 'approved_pengcab' && (
                           <>
                             <button
@@ -287,12 +296,11 @@ export default function PengdaDashboard() {
                           </span>
                         )}
                         {app.status === 'approved_pb' && app.generated_kta_file_path_pb && (
-                          <a href={`${API_BASE}/uploads/generated_kta_pb/${app.generated_kta_file_path_pb}`}
-                            target="_blank" rel="noreferrer"
-                            className="w-8 h-8 flex items-center justify-center bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 rounded-lg transition-colors text-xs"
-                            title="Download KTA PB">
+                          <button type="button" onClick={() => setDocPreview({ show: true, url: `${API_BASE}/uploads/generated_kta_pb/${app.generated_kta_file_path_pb}`, title: 'KTA PDF PB' })}
+                            className="w-8 h-8 flex items-center justify-center bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 rounded-lg transition-colors text-xs cursor-pointer border-none"
+                            title="Lihat KTA PB">
                             <i className="fas fa-file-pdf" />
-                          </a>
+                          </button>
                         )}
                       </div>
                     </td>
@@ -464,10 +472,10 @@ export default function PengdaDashboard() {
                       <td className="px-4 py-3 text-gray-500">{t.notes || '-'}</td>
                       <td className="px-4 py-3">
                         {t.payment_proof_path && (
-                          <a href={`${API_BASE}/uploads/${t.payment_proof_path}`} target="_blank" rel="noopener noreferrer"
-                            className="inline-flex items-center gap-1.5 text-xs text-emerald-400 hover:text-emerald-300 font-medium">
+                          <button type="button" onClick={() => setDocPreview({ show: true, url: `${API_BASE}/uploads/${t.payment_proof_path}`, title: 'Bukti Pembayaran' })}
+                            className="inline-flex items-center gap-1.5 text-xs text-emerald-400 hover:text-emerald-300 font-medium cursor-pointer bg-transparent border-none">
                             <i className="fas fa-image text-[10px]" />Lihat
-                          </a>
+                          </button>
                         )}
                       </td>
                     </tr>
@@ -528,6 +536,13 @@ export default function PengdaDashboard() {
 
       {/* Tab Content */}
       {activeTab === 'kta' && renderKtaSection()}
+      {activeTab === 'kta-detail' && selectedAppId && (
+        <KtaDetailPanel
+          appId={selectedAppId}
+          onBack={() => { setActiveTab('kta'); setSelectedAppId(null); }}
+          onStatusUpdated={fetchData}
+        />
+      )}
       {activeTab === 'members' && renderMembersSection()}
       {activeTab === 'balance' && renderBalanceSection()}
       {activeTab === 'kejurnas' && <KejurnasManage embedded />}
@@ -543,6 +558,7 @@ export default function PengdaDashboard() {
         onReasonChange={setConfirmReason}
         reasonLabel={confirm.status === 'rejected_pengda' ? 'Alasan Penolakan *' : 'Catatan (opsional)'}
       />
+      <DocumentPreviewModal show={docPreview.show} url={docPreview.url} title={docPreview.title} onClose={() => setDocPreview({ show: false, url: '', title: '' })} />
     </SidebarLayout>
   );
 }

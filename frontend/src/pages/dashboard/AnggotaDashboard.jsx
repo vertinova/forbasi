@@ -4,6 +4,7 @@ import { useAuth } from '../../hooks/useAuth';
 import api from '../../services/api';
 import toast from 'react-hot-toast';
 import KtaSubmitForm from '../kta/KtaSubmitForm';
+import DocumentPreviewModal from '../../components/common/DocumentPreviewModal';
 
 const API_BASE = (import.meta.env.VITE_API_URL || 'http://localhost:5000/api').replace(/\/api$/, '');
 
@@ -25,11 +26,11 @@ const SPINNER = <div className="py-20 flex justify-center"><div className="w-8 h
 
 /* ── Progress tracker steps ── */
 const PROGRESS_STEPS = [
-  { key: 'pending',          label: 'Pengajuan' },
-  { key: 'approved_pengcab', label: 'Pengcab' },
-  { key: 'approved_pengda',  label: 'Pengda' },
-  { key: 'approved_pb',      label: 'PB' },
-  { key: 'kta_issued',       label: 'Terbit' },
+  { key: 'pending',          label: 'Pengajuan Dikirim',   short: 'Pengajuan', desc: 'Menunggu verifikasi dari Pengcab',   icon: 'fa-paper-plane' },
+  { key: 'approved_pengcab', label: 'Disetujui Pengcab',   short: 'Pengcab',   desc: 'Diteruskan ke Pengda untuk review', icon: 'fa-building' },
+  { key: 'approved_pengda',  label: 'Disetujui Pengda',    short: 'Pengda',    desc: 'Diteruskan ke PB untuk persetujuan', icon: 'fa-landmark' },
+  { key: 'approved_pb',      label: 'Disetujui PB',        short: 'PB',        desc: 'KTA sedang dalam proses penerbitan', icon: 'fa-stamp' },
+  { key: 'kta_issued',       label: 'KTA Diterbitkan',     short: 'Terbit',    desc: 'KTA resmi telah aktif',             icon: 'fa-id-card' },
 ];
 const stepIndex = (status) => {
   const map = { pending: 0, approved_pengcab: 1, approved_pengda: 2, approved_pb: 3, kta_issued: 4, resubmit_to_pengda: 2, pending_pengda_resubmit: 2 };
@@ -42,6 +43,7 @@ export default function AnggotaDashboard() {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [applications, setApplications] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [docPreview, setDocPreview] = useState({ show: false, url: '', title: '' });
 
   useEffect(() => { fetchApps(); }, []);
 
@@ -133,7 +135,7 @@ export default function AnggotaDashboard() {
                     ${active ? 'bg-emerald-500 text-white ring-4 ring-emerald-500/20 scale-110' : done ? 'bg-emerald-500 text-white' : 'bg-[#1c1f2e] text-gray-500 ring-1 ring-white/[0.08]'}`}>
                     {done ? <i className="fas fa-check text-[9px]" /> : i + 1}
                   </div>
-                  <span className={`text-[9px] mt-1.5 font-medium ${active ? 'text-emerald-400' : done ? 'text-gray-400' : 'text-gray-600'}`}>{step.label}</span>
+                  <span className={`text-[9px] mt-1.5 font-medium ${active ? 'text-emerald-400' : done ? 'text-gray-400' : 'text-gray-600'}`}>{step.short}</span>
                 </div>
               );
             })}
@@ -160,16 +162,17 @@ export default function AnggotaDashboard() {
             </div>
           )}
           {latest.status === 'kta_issued' && latest.generated_kta_file_path_pb && (
-            <a href={`${API_BASE}/uploads/${latest.generated_kta_file_path_pb}`} target="_blank" rel="noreferrer"
-              className="flex items-center justify-center gap-2 py-3 border-t border-white/[0.06] text-xs font-semibold text-emerald-400 hover:bg-white/[0.02] transition-colors no-underline">
-              <i className="fas fa-download text-[10px]" />Download KTA
-            </a>
+            <button type="button" onClick={() => setDocPreview({ show: true, url: `${API_BASE}/uploads/${latest.generated_kta_file_path_pb}`, title: 'KTA PDF' })}
+              className="flex items-center justify-center gap-2 py-3 border-t border-white/[0.06] text-xs font-semibold text-emerald-400 hover:bg-white/[0.02] transition-colors bg-transparent cursor-pointer w-full border-x-0 border-b-0">
+              <i className="fas fa-eye text-[10px]" />Lihat KTA
+            </button>
           )}
         </div>
       )}
 
       {/* Quick action cards */}
-      <div className="grid grid-cols-2 gap-3">
+      <div className={`grid ${hasIssued ? 'grid-cols-1' : 'grid-cols-2'} gap-3`}>
+        {!hasIssued && (
         <button onClick={() => setActiveTab('kta-application')}
           className="group bg-[#141620] rounded-2xl border border-white/[0.06] p-4 text-left transition-all cursor-pointer font-[Poppins] active:scale-[0.97] hover:border-emerald-500/20">
           <div className="w-10 h-10 rounded-xl bg-emerald-500/15 flex items-center justify-center mb-3 group-hover:bg-emerald-500/25 transition-colors">
@@ -178,6 +181,7 @@ export default function AnggotaDashboard() {
           <div className="text-sm font-semibold text-white">Ajukan KTA</div>
           <div className="text-[10px] text-gray-500 mt-0.5">Buat pengajuan baru</div>
         </button>
+        )}
         <button onClick={() => setActiveTab('kta-tracking')}
           className="group bg-[#141620] rounded-2xl border border-white/[0.06] p-4 text-left transition-all cursor-pointer font-[Poppins] active:scale-[0.97] hover:border-sky-500/20">
           <div className="w-10 h-10 rounded-xl bg-sky-500/15 flex items-center justify-center mb-3 group-hover:bg-sky-500/25 transition-colors">
@@ -193,15 +197,6 @@ export default function AnggotaDashboard() {
   /* ─────────────────── TAB: AJUKAN KTA ─────────────────── */
   const TabKtaApplication = () => (
     <div className="space-y-4">
-      {/* Header */}
-      <div className="flex items-center gap-3 mb-1">
-        <button onClick={() => setActiveTab('dashboard')}
-          className="w-9 h-9 rounded-xl bg-white/[0.05] border border-white/[0.08] flex items-center justify-center text-gray-400 hover:text-white hover:bg-white/[0.08] transition-all cursor-pointer">
-          <i className="fas fa-arrow-left text-xs" />
-        </button>
-        <h2 className="text-lg font-bold text-white m-0">Ajukan KTA</h2>
-      </div>
-
       {canSubmitKta ? (
         <KtaSubmitForm onSuccess={() => { fetchApps(); setActiveTab('kta-tracking'); }} />
       ) : (
@@ -261,67 +256,225 @@ export default function AnggotaDashboard() {
   );
 
   /* ─────────────────── TAB: TRACKING ─────────────────── */
-  const TabKtaTracking = () => (
-    <div className="space-y-4">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-1">
-        <div className="flex items-center gap-3">
-          <button onClick={() => setActiveTab('dashboard')}
-            className="w-9 h-9 rounded-xl bg-white/[0.05] border border-white/[0.08] flex items-center justify-center text-gray-400 hover:text-white hover:bg-white/[0.08] transition-all cursor-pointer">
-            <i className="fas fa-arrow-left text-xs" />
-          </button>
-          <h2 className="text-lg font-bold text-white m-0">Tracking KTA</h2>
-        </div>
-        <span className="text-[11px] text-gray-500 bg-white/[0.05] px-2.5 py-1 rounded-full">{applications.length}</span>
-      </div>
+  const TabKtaTracking = () => {
+    /* Static color map to avoid dynamic Tailwind classes */
+    const C = {
+      amber:   { dot: 'bg-amber-500', dotRing: 'ring-amber-400/30', shadow: 'shadow-amber-500/30', text: 'text-amber-400', line: 'bg-amber-400/40', badge: 'bg-amber-400/10 text-amber-400 ring-1 ring-amber-400/20' },
+      sky:     { dot: 'bg-sky-500',   dotRing: 'ring-sky-400/30',   shadow: 'shadow-sky-500/30',   text: 'text-sky-400',   line: 'bg-sky-400/40',   badge: 'bg-sky-400/10 text-sky-400 ring-1 ring-sky-400/20' },
+      emerald: { dot: 'bg-emerald-500', dotRing: 'ring-emerald-400/30', shadow: 'shadow-emerald-500/30', text: 'text-emerald-400', line: 'bg-emerald-400/40', badge: 'bg-emerald-400/10 text-emerald-400 ring-1 ring-emerald-400/20' },
+      red:     { dot: 'bg-red-500',   dotRing: 'ring-red-400/30',   shadow: 'shadow-red-500/30',   text: 'text-red-400',   line: 'bg-red-400/40',   badge: 'bg-red-400/10 text-red-400 ring-1 ring-red-400/20' },
+      gray:    { dot: 'bg-gray-500',  dotRing: 'ring-gray-400/30',  shadow: 'shadow-gray-500/30',  text: 'text-gray-400',  line: 'bg-gray-400/40',  badge: 'bg-gray-500/10 text-gray-400 ring-1 ring-gray-500/20' },
+    };
 
-      {loading ? SPINNER : applications.length === 0 ? (
-        <div className="bg-[#141620] rounded-2xl border border-white/[0.06] py-16 text-center">
-          <div className="w-16 h-16 rounded-2xl bg-white/[0.04] flex items-center justify-center mx-auto mb-4">
-            <i className="fas fa-inbox text-gray-600 text-2xl" />
+    return (
+      <div className="space-y-4">
+        {loading ? SPINNER : applications.length === 0 ? (
+          <div className="bg-[#141620] rounded-2xl border border-white/[0.06] py-16 text-center">
+            <div className="w-16 h-16 rounded-2xl bg-white/[0.04] flex items-center justify-center mx-auto mb-4">
+              <i className="fas fa-inbox text-gray-600 text-2xl" />
+            </div>
+            <div className="text-sm text-gray-500">Belum ada pengajuan</div>
+            <button onClick={() => setActiveTab('kta-application')}
+              className="mt-4 px-5 py-2 bg-emerald-500/15 border border-emerald-500/20 text-emerald-400 text-xs font-semibold rounded-xl cursor-pointer font-[Poppins] transition-all hover:bg-emerald-500/25">
+              <i className="fas fa-plus mr-1.5" />Ajukan Sekarang
+            </button>
           </div>
-          <div className="text-sm text-gray-500">Belum ada pengajuan</div>
-          <button onClick={() => setActiveTab('kta-application')}
-            className="mt-4 px-5 py-2 bg-emerald-500/15 border border-emerald-500/20 text-emerald-400 text-xs font-semibold rounded-xl cursor-pointer font-[Poppins] transition-all hover:bg-emerald-500/25">
-            <i className="fas fa-plus mr-1.5" />Ajukan Sekarang
-          </button>
-        </div>
-      ) : (
-        <div className="space-y-3">
-          {applications.map((app) => (
-            <div key={app.id} className="bg-[#141620] rounded-2xl border border-white/[0.06] overflow-hidden">
-              <div className="p-4">
-                <div className="flex justify-between items-start gap-2 mb-1">
-                  <div className="flex-1 min-w-0">
-                    <div className="font-semibold text-white text-sm truncate">{app.club_name}</div>
-                    <div className="text-[11px] text-gray-500 mt-0.5">
-                      {new Date(app.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
-                      {app.coach_name && <span className="text-gray-600"> · {app.coach_name}</span>}
+        ) : (
+          applications.map((app) => {
+            const step = stepIndex(app.status);
+            const isRej = app.status?.startsWith('rejected');
+            const s = STATUS_MAP[app.status] || { cls: '', label: app.status, icon: 'fa-question', color: 'gray' };
+            const c = C[s.color] || C.gray;
+
+            return (
+              <div key={app.id} className="space-y-3">
+
+                {/* ── Header Card with gradient accent ── */}
+                <div className="bg-[#141620] rounded-2xl border border-white/[0.06] overflow-hidden">
+                  <div className={`h-1 ${isRej ? 'bg-gradient-to-r from-red-500 to-rose-400' : app.status === 'kta_issued' ? 'bg-gradient-to-r from-emerald-500 to-teal-400' : 'bg-gradient-to-r from-amber-500 to-orange-400'}`} />
+                  <div className="p-5">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex-1 min-w-0">
+                        <h3 className="text-white font-bold text-base m-0 truncate leading-tight">{app.club_name}</h3>
+                        <div className="flex items-center gap-2 mt-1.5">
+                          <i className="fas fa-calendar-alt text-gray-600 text-[10px]" />
+                          <span className="text-[11px] text-gray-500">
+                            {new Date(app.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}
+                          </span>
+                        </div>
+                      </div>
+                      <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-bold flex-shrink-0 ${c.badge}`}>
+                        <i className={`fas ${s.icon} text-[9px]`} />{s.label}
+                      </span>
                     </div>
                   </div>
-                  <div className="flex-shrink-0">{statusBadge(app.status)}</div>
                 </div>
-              </div>
-              <div className="flex border-t border-white/[0.04]">
-                <button
-                  onClick={() => navigate(`/anggota/kta/${app.id}`)}
-                  className="flex-1 py-2.5 text-[11px] font-semibold text-sky-400 hover:bg-white/[0.02] transition-colors cursor-pointer bg-transparent border-none font-[Poppins]">
-                  <i className="fas fa-eye mr-1.5 text-[9px]" />Detail
-                </button>
+
+                {/* ── Vertical Progress Stepper ── */}
+                {!isRej && (
+                  <div className="bg-[#141620] rounded-2xl border border-white/[0.06] overflow-hidden">
+                    <div className="px-5 py-3.5 border-b border-white/[0.04] flex items-center gap-2.5">
+                      <div className="w-6 h-6 rounded-lg bg-emerald-500/10 flex items-center justify-center">
+                        <i className="fas fa-route text-emerald-400 text-[10px]" />
+                      </div>
+                      <span className="text-xs font-bold text-white">Tahapan Verifikasi</span>
+                      <span className="ml-auto text-[10px] text-gray-500 font-semibold tabular-nums">{Math.min(step + 1, 5)} / 5</span>
+                    </div>
+                    <div className="p-5 pl-6">
+                      {PROGRESS_STEPS.map((ps, i) => {
+                        const done = step >= i;
+                        const isCurrent = step === i;
+                        const isLast = i === PROGRESS_STEPS.length - 1;
+                        return (
+                          <div key={ps.key} className="flex gap-4 relative">
+                            {/* Vertical line */}
+                            {!isLast && (
+                              <div className="absolute left-[15px] top-[34px] bottom-0 w-[2px]"
+                                style={{ background: done && step > i ? undefined : undefined }}>
+                                <div className={`w-full h-full ${done && step > i ? c.line : 'bg-white/[0.06]'} rounded-full`} />
+                              </div>
+                            )}
+                            {/* Dot */}
+                            <div className="relative z-10 flex-shrink-0 pt-0.5">
+                              <div className={`w-[30px] h-[30px] rounded-xl flex items-center justify-center transition-all
+                                ${isCurrent
+                                  ? `${c.dot} text-white shadow-lg ${c.shadow} ring-4 ${c.dotRing}`
+                                  : done
+                                    ? `${c.dot} text-white shadow-md ${c.shadow}`
+                                    : 'bg-[#1a1d2e] text-gray-600 ring-1 ring-white/[0.08]'
+                                }`}>
+                                {done
+                                  ? <i className={`fas ${isCurrent && app.status !== 'kta_issued' ? ps.icon : 'fa-check'} text-[11px]`} />
+                                  : <span className="text-[11px] font-bold">{i + 1}</span>
+                                }
+                              </div>
+                            </div>
+                            {/* Content */}
+                            <div className={`flex-1 ${isLast ? 'pb-1' : 'pb-6'}`}>
+                              <div className={`text-[13px] font-bold leading-tight ${isCurrent ? 'text-white' : done ? 'text-gray-300' : 'text-gray-600'}`}>
+                                {ps.label}
+                              </div>
+                              <div className={`text-[11px] mt-0.5 leading-snug ${isCurrent ? c.text : done ? 'text-gray-500' : 'text-gray-700'}`}>
+                                {ps.desc}
+                              </div>
+                              {isCurrent && app.status !== 'kta_issued' && (
+                                <div className="inline-flex items-center gap-1.5 mt-2 px-2.5 py-1 rounded-lg bg-white/[0.04] border border-white/[0.06]">
+                                  <span className="relative flex h-1.5 w-1.5">
+                                    <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${c.dot}`} />
+                                    <span className={`relative inline-flex rounded-full h-1.5 w-1.5 ${c.dot}`} />
+                                  </span>
+                                  <span className="text-[10px] text-gray-400 font-medium">Sedang diproses</span>
+                                </div>
+                              )}
+                              {isCurrent && app.status === 'kta_issued' && (
+                                <div className="inline-flex items-center gap-1.5 mt-2 px-2.5 py-1 rounded-lg bg-emerald-500/10 border border-emerald-500/15">
+                                  <i className="fas fa-check-circle text-emerald-400 text-[9px]" />
+                                  <span className="text-[10px] text-emerald-400 font-semibold">Selesai</span>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {/* ── Rejection Alert ── */}
+                {isRej && app.rejection_reason && (
+                  <div className="bg-[#141620] rounded-2xl border border-red-500/10 overflow-hidden">
+                    <div className="bg-red-500/[0.06] px-5 py-3 flex items-center gap-2.5 border-b border-red-500/10">
+                      <div className="w-7 h-7 rounded-lg bg-red-500/15 flex items-center justify-center flex-shrink-0">
+                        <i className="fas fa-exclamation-triangle text-red-400 text-[10px]" />
+                      </div>
+                      <span className="text-xs font-bold text-red-400">Alasan Penolakan</span>
+                    </div>
+                    <div className="px-5 py-4">
+                      <p className="text-[13px] text-gray-300 m-0 leading-relaxed">{app.rejection_reason}</p>
+                    </div>
+                  </div>
+                )}
+
+                {/* ── Download KTA ── */}
                 {app.status === 'kta_issued' && app.generated_kta_file_path_pb && (
-                  <a href={`${API_BASE}/uploads/${app.generated_kta_file_path_pb}`}
-                    target="_blank" rel="noreferrer"
-                    className="flex-1 py-2.5 text-[11px] font-semibold text-emerald-400 hover:bg-white/[0.02] transition-colors text-center no-underline border-l border-white/[0.04]">
-                    <i className="fas fa-download mr-1.5 text-[9px]" />Download
-                  </a>
+                  <button type="button" onClick={() => setDocPreview({ show: true, url: `${API_BASE}/uploads/${app.generated_kta_file_path_pb}`, title: 'KTA PDF' })}
+                    className="flex items-center gap-3 p-4 bg-gradient-to-r from-emerald-500/[0.08] to-teal-500/[0.04] rounded-2xl border border-emerald-500/15 group hover:from-emerald-500/[0.12] hover:to-teal-500/[0.08] transition-all w-full text-left cursor-pointer">
+                    <div className="w-10 h-10 rounded-xl bg-emerald-500 flex items-center justify-center shadow-lg shadow-emerald-500/25 flex-shrink-0 group-hover:scale-105 transition-transform">
+                      <i className="fas fa-eye text-white text-sm" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm font-bold text-white">Lihat KTA PDF</div>
+                      <div className="text-[11px] text-emerald-400/70 mt-0.5">Klik untuk preview kartu tanda anggota</div>
+                    </div>
+                    <i className="fas fa-chevron-right text-emerald-400/40 text-xs" />
+                  </button>
+                )}
+
+                {/* ── Detail Pengajuan ── */}
+                <div className="bg-[#141620] rounded-2xl border border-white/[0.06] overflow-hidden">
+                  <div className="px-5 py-3.5 border-b border-white/[0.04] flex items-center gap-2.5">
+                    <div className="w-6 h-6 rounded-lg bg-sky-500/10 flex items-center justify-center">
+                      <i className="fas fa-clipboard-list text-sky-400 text-[10px]" />
+                    </div>
+                    <span className="text-xs font-bold text-white">Informasi Klub</span>
+                  </div>
+                  <div className="p-4 space-y-0.5">
+                    {[
+                      { icon: 'fa-map-marker-alt', label: 'Provinsi',  value: app.province_name },
+                      { icon: 'fa-city',           label: 'Kota/Kab',  value: app.city_name },
+                      { icon: 'fa-home',           label: 'Alamat',    value: app.club_address },
+                      { icon: 'fa-user-tie',       label: 'Ketua',     value: app.leader_name },
+                      { icon: 'fa-school',         label: 'Sekolah',   value: app.school_name },
+                      { icon: 'fa-futbol',         label: 'Pelatih',   value: app.coach_name },
+                      { icon: 'fa-user-shield',    label: 'Manajer',   value: app.manager_name },
+                      { icon: 'fa-coins',          label: 'Nominal',   value: app.nominal_paid ? `Rp ${Number(app.nominal_paid).toLocaleString('id-ID')}` : null },
+                    ].filter(f => f.value).map(f => (
+                      <div key={f.label} className="flex items-center gap-3 px-1 py-2.5 rounded-xl hover:bg-white/[0.02] transition-colors">
+                        <div className="w-8 h-8 rounded-lg bg-white/[0.04] flex items-center justify-center flex-shrink-0">
+                          <i className={`fas ${f.icon} text-gray-500 text-[11px]`} />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="text-[10px] text-gray-600 font-semibold uppercase tracking-wider leading-none">{f.label}</div>
+                          <div className="text-[13px] text-gray-200 mt-1 truncate">{f.value}</div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* ── Dokumen ── */}
+                {(app.sk_file_path || app.logo_path || app.payment_proof_path || app.ad_file_path) && (
+                  <div className="bg-[#141620] rounded-2xl border border-white/[0.06] overflow-hidden">
+                    <div className="px-5 py-3.5 border-b border-white/[0.04] flex items-center gap-2.5">
+                      <div className="w-6 h-6 rounded-lg bg-amber-500/10 flex items-center justify-center">
+                        <i className="fas fa-folder-open text-amber-400 text-[10px]" />
+                      </div>
+                      <span className="text-xs font-bold text-white">Dokumen</span>
+                    </div>
+                    <div className="p-3 grid grid-cols-2 gap-2">
+                      {[
+                        { path: app.sk_file_path,        label: 'SK Pendirian', icon: 'fa-file-alt',      bg: 'bg-blue-500/[0.08]',     border: 'border-blue-500/15',   text: 'text-blue-400',   hover: 'hover:bg-blue-500/[0.12]' },
+                        { path: app.logo_path,           label: 'Logo Klub',    icon: 'fa-image',         bg: 'bg-violet-500/[0.08]',   border: 'border-violet-500/15', text: 'text-violet-400', hover: 'hover:bg-violet-500/[0.12]' },
+                        { path: app.payment_proof_path,  label: 'Bukti Bayar',  icon: 'fa-receipt',       bg: 'bg-emerald-500/[0.08]',  border: 'border-emerald-500/15', text: 'text-emerald-400', hover: 'hover:bg-emerald-500/[0.12]' },
+                        { path: app.ad_file_path,        label: 'AD/ART',       icon: 'fa-file-contract', bg: 'bg-amber-500/[0.08]',    border: 'border-amber-500/15',  text: 'text-amber-400',  hover: 'hover:bg-amber-500/[0.12]' },
+                      ].filter(d => d.path).map(d => (
+                        <button key={d.label} type="button" onClick={() => setDocPreview({ show: true, url: `${API_BASE}/uploads/${d.path}`, title: d.label })}
+                          className={`flex items-center gap-2.5 p-3 rounded-xl ${d.bg} border ${d.border} ${d.text} ${d.hover} transition-all group cursor-pointer text-left`}>
+                          <i className={`fas ${d.icon} text-xs`} />
+                          <span className="text-[11px] font-semibold flex-1 truncate">{d.label}</span>
+                          <i className="fas fa-eye text-[8px] opacity-0 group-hover:opacity-60 transition-opacity" />
+                        </button>
+                      ))}
+                    </div>
+                  </div>
                 )}
               </div>
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  );
+            );
+          })
+        )}
+      </div>
+    );
+  };
 
   /* ─────────────────── TAB: PROFIL ─────────────────── */
   const TabProfile = () => (
@@ -371,7 +524,7 @@ export default function AnggotaDashboard() {
 
   const TABS = [
     { id: 'dashboard',        icon: 'fa-home',           label: 'Home' },
-    { id: 'kta-application',  icon: 'fa-file-signature', label: 'Ajukan' },
+    ...(!hasIssued ? [{ id: 'kta-application',  icon: 'fa-file-signature', label: 'Ajukan' }] : []),
     { id: 'kta-tracking',     icon: 'fa-location-arrow', label: 'Tracking' },
     { id: 'profile',          icon: 'fa-user',           label: 'Profil' },
   ];
@@ -393,6 +546,8 @@ export default function AnggotaDashboard() {
       <div className="max-w-lg mx-auto px-4 pt-3 pb-28">
         {renderTab()}
       </div>
+
+      <DocumentPreviewModal show={docPreview.show} url={docPreview.url} title={docPreview.title} onClose={() => setDocPreview({ show: false, url: '', title: '' })} />
 
       {/* ── BOTTOM NAVIGATION ── */}
       <nav className="fixed bottom-0 left-0 right-0 z-50">
