@@ -97,6 +97,7 @@ const server = http.createServer((req, res) => {
   let body = '';
   req.on('data', chunk => { body += chunk; });
   req.on('end', () => {
+    console.log(`[webhook] Received ${req.method} ${req.url} from ${req.socket.remoteAddress}, body=${body.length}b, event=${req.headers['x-github-event'] || 'none'}`);
     const sig = req.headers['x-hub-signature-256'] || '';
 
     if (!verifySignature(body, sig)) {
