@@ -38,7 +38,8 @@ function getKtaStatusLabel(status) {
 }
 
 function buildBaseUrl(req) {
-  return `${req.protocol}://${req.get('host')}`;
+  const proto = req.get('x-forwarded-proto') || req.protocol;
+  return `${proto}://${req.get('host')}`;
 }
 
 function buildLogoUrl(req, logoPath) {
