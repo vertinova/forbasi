@@ -112,6 +112,52 @@ However, it's best to sync all files beforehand for reliability.
 
 ---
 
+## Auto-Deploy Webhook
+
+A GitHub webhook server automatically deploys the backend on every push to `main`.
+
+### First-time Setup (run once from local)
+
+```bash
+bash deploy/setup-webhook.sh
+```
+
+This will:
+1. Copy `webhook-server.js` to `/var/www/webhook-server.js` on the VPS
+2. Register it as a PM2 service (`forbasi-webhook`) on port 9000
+3. Update and reload the Nginx config
+4. Print the GitHub Webhook settings to configure
+
+### GitHub Webhook Settings
+
+| Field         | Value                               |
+|---------------|-------------------------------------|
+| Payload URL   | `https://forbasi.or.id/webhook`     |
+| Content type  | `application/json`                  |
+| Secret        | value of `WEBHOOK_SECRET` on VPS    |
+| Events        | Just the push event                 |
+
+### Health Check
+
+```bash
+# From VPS or browser
+curl https://forbasi.or.id/webhook/ping
+```
+
+### Webhook Logs
+
+```bash
+ssh root@72.61.140.193 "pm2 logs forbasi-webhook --lines 50"
+```
+
+### Manual Restart
+
+```bash
+ssh root@72.61.140.193 "pm2 restart forbasi-webhook"
+```
+
+---
+
 ## PM2 Commands
 
 ```bash

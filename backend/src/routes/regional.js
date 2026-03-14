@@ -125,7 +125,9 @@ function validateApiKey(req, res, next) {
   }
 
   const expectedKey = process.env[`API_KEY_${region.toUpperCase()}`] || config.api_key;
-  if (!key || !crypto.timingSafeEqual(Buffer.from(key), Buffer.from(expectedKey))) {
+  const keyBuf = Buffer.from(key);
+  const expectedBuf = Buffer.from(expectedKey);
+  if (!key || keyBuf.length !== expectedBuf.length || !crypto.timingSafeEqual(keyBuf, expectedBuf)) {
     return res.status(401).json({ success: false, error: 'Unauthorized. API key tidak valid.' });
   }
 
@@ -227,7 +229,7 @@ router.post('/:region/login', validateApiKey, async (req, res) => {
 
     const rolesIn = ALLOWED_ROLES.join(',');
     const [users] = await db.query(
-      `${USER_SELECT} WHERE u.username = ? AND u.role_id IN (${rolesIn}) AND u.province_id = ?`,
+      `${USER_SELECT}, u.password WHERE u.username = ? AND u.role_id IN (${rolesIn}) AND u.province_id = ?`,
       [username.trim(), cfg.province_id]
     );
 
@@ -237,6 +239,7 @@ router.post('/:region/login', validateApiKey, async (req, res) => {
     const valid = await bcrypt.compare(password, user.password);
     if (!valid) return res.status(401).json({ success: false, error: 'Password salah.' });
 
+    delete user.password;
     const account = formatAccount(user, req, true);
     account.kta = await getUserKtaData(db, user.id, req);
 

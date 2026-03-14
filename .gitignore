@@ -12,6 +12,21 @@ frontend/dist-ssr/
 
 # Uploads (user-generated files)
 backend/uploads/
+uploadsproduction/
+
+# Database dumps & archives
+*.sql
+*.tar.gz
+php/schema_dump.json
+
+# Test credentials
+backend/test-login.json
+backend/login-pb.json
+
+# Backup files
+*_backup.*
+*backup*.*
+*.bak
 
 # Logs
 *.log

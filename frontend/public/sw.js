@@ -26,10 +26,11 @@ self.addEventListener('activate', (event) => {
 // Fetch - network first, fallback to cache
 self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
-  // Skip non-GET, API requests, and non-http(s) schemes (e.g. chrome-extension://)
+  // Skip non-GET, API requests, version.json, and non-http(s) schemes
   if (
     event.request.method !== 'GET' ||
     event.request.url.includes('/api/') ||
+    event.request.url.includes('version.json') ||
     (url.protocol !== 'http:' && url.protocol !== 'https:')
   ) {
     return;
@@ -108,4 +109,15 @@ self.addEventListener('notificationclick', (event) => {
       return self.clients.openWindow(urlToOpen);
     })
   );
+});
+
+// Message handler — supports CLEAR_CACHE for version updates
+self.addEventListener('message', (event) => {
+  if (event.data?.type === 'CLEAR_CACHE') {
+    caches.keys().then((keys) =>
+      Promise.all(keys.map((key) => caches.delete(key)))
+    ).then(() => {
+      self.skipWaiting();
+    });
+  }
 });

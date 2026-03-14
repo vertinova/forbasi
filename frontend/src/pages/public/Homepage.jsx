@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../../services/api';
 import './Homepage.css';
@@ -49,6 +49,9 @@ export default function Homepage() {
   const [mobileNav, setMobileNav] = useState(false);
   const [bannerIdx, setBannerIdx] = useState(0);
 
+  /* Track which sections have been visited (for deferred loading) */
+  const visited = useRef(new Set([0]));
+
   /* ── Data states ── */
   const [allClubs, setAllClubs] = useState([]);
   const [totalMembers, setTotalMembers] = useState(0);
@@ -64,6 +67,9 @@ export default function Homepage() {
   const [liveMarketplace, setLiveMarketplace] = useState([]);
   const [liveBanners, setLiveBanners] = useState([]);
 
+  /* ── Track which data has been fetched ── */
+  const fetched = useRef({ hero: false, katalog: false, landing: false, clubs: false });
+
   /* ── Counters ── */
   const memberCount = useCountUp(totalMembers, active === 0);
 
@@ -73,6 +79,10 @@ export default function Homepage() {
     setAnimating(true);
     setActive(idx);
     setMobileNav(false);
+    visited.current.add(idx);
+    // Also mark neighbors as visited for preloading
+    if (idx > 0) visited.current.add(idx - 1);
+    if (idx < TOTAL - 1) visited.current.add(idx + 1);
     setTimeout(() => setAnimating(false), 900);
   }, [active, animating]);
 
@@ -121,22 +131,16 @@ export default function Homepage() {
     return () => { window.removeEventListener('touchstart', onStart); window.removeEventListener('touchend', onEnd); };
   }, [active, go]);
 
-  /* ── Fetch data ── */
+  /* ── Fetch data — deferred by section proximity ── */
+  // Hero data (member count) + banners — load immediately (hero visible first)
   useEffect(() => {
+    if (fetched.current.hero) return;
+    fetched.current.hero = true;
     (async () => {
       try { await api.post('/config/track-visitor'); } catch {}
       try {
-        const r = await api.get('/public/clubs', { params: { page: 1, limit: 500 } });
-        setAllClubs(r.data.data?.clubs || []);
+        const r = await api.get('/public/clubs', { params: { page: 1, limit: 1 } });
         setTotalMembers(r.data.data?.total || 0);
-      } catch {}
-      try {
-        const r = await api.get('/public/licensed-members', { params: { type: 'juri' } });
-        setApprovedJuri(r.data.data || []);
-      } catch {}
-      try {
-        const r = await api.get('/public/licensed-members', { params: { type: 'pelatih' } });
-        setApprovedPelatih(r.data.data || []);
       } catch {}
       try {
         const r = await api.get('/landing/public');
@@ -151,6 +155,36 @@ export default function Homepage() {
       } catch {}
     })();
   }, []);
+
+  // Katalog juri/pelatih — load when approaching section 3/4
+  useEffect(() => {
+    if (fetched.current.katalog) return;
+    if (active < 2) return; // defer until section 2+
+    fetched.current.katalog = true;
+    (async () => {
+      try {
+        const r = await api.get('/public/licensed-members', { params: { type: 'juri' } });
+        setApprovedJuri(r.data.data || []);
+      } catch {}
+      try {
+        const r = await api.get('/public/licensed-members', { params: { type: 'pelatih' } });
+        setApprovedPelatih(r.data.data || []);
+      } catch {}
+    })();
+  }, [active]);
+
+  // Clubs list — load when approaching section 5 (members)
+  useEffect(() => {
+    if (fetched.current.clubs) return;
+    if (active < 4) return; // defer until section 4+
+    fetched.current.clubs = true;
+    (async () => {
+      try {
+        const r = await api.get('/public/clubs', { params: { page: 1, limit: 500 } });
+        setAllClubs(r.data.data?.clubs || []);
+      } catch {}
+    })();
+  }, [active]);
 
   /* ── Member filtering ── */
   const filteredClubs = allClubs.filter(c =>
@@ -243,6 +277,10 @@ export default function Homepage() {
   }, []);
 
   /* ═══════════════════ RENDER ═══════════════════ */
+
+  /* Only mount sections within ±1 of active, or previously visited */
+  const shouldRender = (idx) => Math.abs(active - idx) <= 1 || visited.current.has(idx);
+
   return (
     <div className="fp-root">
 
@@ -255,7 +293,7 @@ export default function Homepage() {
             onClick={() => go(i)}
             title={s.label}
           >
-            <span className="fp-nav-pip" />
+            <span className="fp-nav-icon"><i className={`fas ${s.icon}`} /></span>
             <span className="fp-nav-text">{s.label}</span>
           </button>
         ))}
@@ -392,6 +430,7 @@ export default function Homepage() {
         </section>
 
         {/* ════ 1 — VIDEO ════ */}
+        {shouldRender(1) && (
         <section className={`fp-slide fp-video-section${active === 1 ? ' active' : ''}`}>
           <div className="fp-slide-inner">
             <div className="fp-anim fp-section-head" style={{ '--d': '0.15s' }}>
@@ -404,7 +443,7 @@ export default function Homepage() {
                 controls
                 playsInline
                 poster="/logo-forbasi.png"
-                preload="metadata"
+                preload="none"
                 className="fp-video-player"
               >
                 <source src="/forbasi.mp4" type="video/mp4" />
@@ -412,8 +451,10 @@ export default function Homepage() {
             </div>
           </div>
         </section>
+        )}
 
         {/* ════ 2 — TENTANG KAMI ════ */}
+        {shouldRender(2) && (
         <section className={`fp-slide fp-about${active === 2 ? ' active' : ''}`}>
           <div className="fp-deco fp-deco-circle" />
           <div className="fp-slide-inner">
@@ -442,7 +483,7 @@ export default function Homepage() {
               </div>
               <div className="fp-anim fp-about-visual" style={{ '--d': '0.5s' }}>
                 <div className="fp-about-logo">
-                  <img src="/logo-forbasi.png" alt="FORBASI" />
+                  <img src="/logo-forbasi.png" alt="FORBASI" loading="lazy" />
                 </div>
                 <div className="fp-about-badges">
                   <span><i className="fas fa-shield-alt" /> Anggota KORMI</span>
@@ -452,8 +493,10 @@ export default function Homepage() {
             </div>
           </div>
         </section>
+        )}
 
         {/* ════ 3 — KATALOG JURI (approved) ════ */}
+        {shouldRender(3) && (
         <section className={`fp-slide fp-katalog${active === 3 ? ' active' : ''}`}>
           <div className="fp-slide-inner">
             <div className="fp-anim fp-section-head" style={{ '--d': '0.15s' }}>
@@ -472,7 +515,7 @@ export default function Homepage() {
                   <div key={j.id} className="fp-person-card">
                     <div className="fp-person-photo">
                       {j.pas_foto ? (
-                        <img src={`${uploadsBase()}${j.pas_foto}`} alt={j.nama_lengkap} onError={e => { e.target.src = '/logo-forbasi.png'; }} />
+                        <img src={`${uploadsBase()}${j.pas_foto}`} alt={j.nama_lengkap} loading="lazy" onError={e => { e.target.src = '/logo-forbasi.png'; }} />
                       ) : (
                         <div className="fp-person-placeholder"><i className="fas fa-user" /></div>
                       )}
@@ -485,8 +528,10 @@ export default function Homepage() {
             )}
           </div>
         </section>
+        )}
 
         {/* ════ 6 — KATALOG PELATIH (approved) ════ */}
+        {shouldRender(4) && (
         <section className={`fp-slide fp-katalog fp-katalog-pelatih${active === 4 ? ' active' : ''}`}>
           <div className="fp-slide-inner">
             <div className="fp-anim fp-section-head" style={{ '--d': '0.15s' }}>
@@ -505,7 +550,7 @@ export default function Homepage() {
                   <div key={p.id} className="fp-person-card">
                     <div className="fp-person-photo">
                       {p.pas_foto ? (
-                        <img src={`${uploadsBase()}${p.pas_foto}`} alt={p.nama_lengkap} onError={e => { e.target.src = '/logo-forbasi.png'; }} />
+                        <img src={`${uploadsBase()}${p.pas_foto}`} alt={p.nama_lengkap} loading="lazy" onError={e => { e.target.src = '/logo-forbasi.png'; }} />
                       ) : (
                         <div className="fp-person-placeholder"><i className="fas fa-user" /></div>
                       )}
@@ -518,8 +563,10 @@ export default function Homepage() {
             )}
           </div>
         </section>
+        )}
 
         {/* ════ 7 — ANGGOTA AKTIF ════ */}
+        {shouldRender(5) && (
         <section className={`fp-slide fp-members${active === 5 ? ' active' : ''}`}>
           <div className="fp-slide-inner">
             <div className="fp-anim fp-section-head" style={{ '--d': '0.15s' }}>
@@ -560,6 +607,7 @@ export default function Homepage() {
                         <img
                           src={`${uploadsBase()}${club.logo_path}`}
                           alt={club.club_name}
+                          loading="lazy"
                           onError={e => {
                             e.target.onerror = null;
                             e.target.style.display = 'none';
@@ -600,8 +648,10 @@ export default function Homepage() {
             )}
           </div>
         </section>
+        )}
 
         {/* ════ 6 — KATALOG EVENT ════ */}
+        {shouldRender(6) && (
         <section className={`fp-slide fp-events${active === 6 ? ' active' : ''}`}>
           <div className="fp-slide-inner">
             <div className="fp-anim fp-section-head" style={{ '--d': '0.15s' }}>
@@ -629,6 +679,7 @@ export default function Homepage() {
                         <img
                           src={ev.banner}
                           alt={ev.nama}
+                          loading="lazy"
                           onError={e => { e.target.style.display = 'none'; e.target.parentElement.classList.add('no-img'); }}
                         />
                       </div>
@@ -657,8 +708,10 @@ export default function Homepage() {
             )}
           </div>
         </section>
+        )}
 
         {/* ════ 7 — GALERI ════ */}
+        {shouldRender(7) && (
         <section className={`fp-slide fp-gallery${active === 7 ? ' active' : ''}`}>
           <div className="fp-slide-inner">
             <div className="fp-anim fp-section-head" style={{ '--d': '0.15s' }}>
@@ -684,6 +737,7 @@ export default function Homepage() {
                     <img
                       src={img.src}
                       alt={img.caption}
+                      loading="lazy"
                       onError={e => { e.target.style.display = 'none'; e.target.parentElement.classList.add('no-img'); }}
                     />
                     <div className="fp-gal-info">
@@ -706,8 +760,10 @@ export default function Homepage() {
             )}
           </div>
         </section>
+        )}
 
         {/* ════ 8 — BERITA ════ */}
+        {shouldRender(8) && (
         <section className={`fp-slide fp-berita${active === 8 ? ' active' : ''}`}>
           <div className="fp-slide-inner">
             <div className="fp-anim fp-section-head" style={{ '--d': '0.15s' }}>
@@ -744,8 +800,10 @@ export default function Homepage() {
             )}
           </div>
         </section>
+        )}
 
         {/* ════ 9 — MARKETPLACE ════ */}
+        {shouldRender(9) && (
         <section className={`fp-slide fp-market${active === 9 ? ' active' : ''}`}>
           <div className="fp-slide-inner">
             <div className="fp-anim fp-section-head" style={{ '--d': '0.15s' }}>
@@ -761,6 +819,7 @@ export default function Homepage() {
                     <img
                       src={item.img}
                       alt={item.nama}
+                      loading="lazy"
                       onError={e => { e.target.style.display = 'none'; e.target.parentElement.classList.add('no-img'); }}
                     />
                   </div>
@@ -785,6 +844,7 @@ export default function Homepage() {
             </div>
           </div>
         </section>
+        )}
 
       </div>
 

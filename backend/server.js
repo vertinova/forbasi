@@ -150,6 +150,24 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
+// Version check (served from frontend's version.json in production, 
+// but also available as API endpoint for flexibility)
+app.get('/api/version', (req, res) => {
+  const versionFile = path.join(__dirname, '..', 'forbasi-pb-frontend', 'dist', 'version.json');
+  const fallback = path.join(__dirname, 'version.json');
+  const fs = require('fs');
+  
+  for (const f of [versionFile, fallback]) {
+    try {
+      if (fs.existsSync(f)) {
+        const data = JSON.parse(fs.readFileSync(f, 'utf8'));
+        return res.json({ success: true, ...data });
+      }
+    } catch { /* try next */ }
+  }
+  res.json({ success: true, version: '1.0.0' });
+});
+
 // Error handler
 app.use(errorHandler);
 

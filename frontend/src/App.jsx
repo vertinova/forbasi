@@ -1,53 +1,50 @@
+import { lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { AuthProvider } from './contexts/AuthContext';
 import ProtectedRoute from './components/common/ProtectedRoute';
-// import PwaInstallPrompt from './components/common/PwaInstallPrompt'; // Disabled
+import UpdateBanner from './components/common/UpdateBanner';
 
-// Auth pages
-import Login from './pages/auth/Login';
-import ForgotPassword from './pages/auth/ForgotPassword';
-import ResetPassword from './pages/auth/ResetPassword';
-import RegisterLicense from './pages/auth/RegisterLicense';
-import Register from './pages/auth/Register';
-
-// Public pages
+// Homepage loaded eagerly (landing page)
 import Homepage from './pages/public/Homepage';
-import VerifyKta from './pages/public/VerifyKta';
-import ApprovedTeams from './pages/public/ApprovedTeams';
 
-// Dashboards
-import AnggotaDashboard from './pages/dashboard/AnggotaDashboard';
-import PengcabDashboard from './pages/dashboard/PengcabDashboard';
-import PengdaDashboard from './pages/dashboard/PengdaDashboard';
-import PbDashboard from './pages/dashboard/PbDashboard';
-import SuperAdminDashboard from './pages/dashboard/SuperAdminDashboard';
-import LicenseUserDashboard from './pages/dashboard/LicenseUserDashboard';
+// Everything else lazy-loaded
+const Login = lazy(() => import('./pages/auth/Login'));
+const ForgotPassword = lazy(() => import('./pages/auth/ForgotPassword'));
+const ResetPassword = lazy(() => import('./pages/auth/ResetPassword'));
+const RegisterLicense = lazy(() => import('./pages/auth/RegisterLicense'));
+const Register = lazy(() => import('./pages/auth/Register'));
+const VerifyKta = lazy(() => import('./pages/public/VerifyKta'));
+const ApprovedTeams = lazy(() => import('./pages/public/ApprovedTeams'));
+const AnggotaDashboard = lazy(() => import('./pages/dashboard/AnggotaDashboard'));
+const PengcabDashboard = lazy(() => import('./pages/dashboard/PengcabDashboard'));
+const PengdaDashboard = lazy(() => import('./pages/dashboard/PengdaDashboard'));
+const PbDashboard = lazy(() => import('./pages/dashboard/PbDashboard'));
+const SuperAdminDashboard = lazy(() => import('./pages/dashboard/SuperAdminDashboard'));
+const LicenseUserDashboard = lazy(() => import('./pages/dashboard/LicenseUserDashboard'));
+const KtaSubmitForm = lazy(() => import('./pages/kta/KtaSubmitForm'));
+const KtaDetail = lazy(() => import('./pages/kta/KtaDetail'));
+const ManageLicense = lazy(() => import('./pages/license/ManageLicense'));
+const KejurnasManage = lazy(() => import('./pages/kejurnas/KejurnasManage'));
+const NotificationPanel = lazy(() => import('./pages/notifications/NotificationPanel'));
+const KtaConfigPage = lazy(() => import('./pages/config/KtaConfigPage'));
+const Reregistration = lazy(() => import('./pages/config/Reregistration'));
+const ManageReregistration = lazy(() => import('./pages/config/ManageReregistration'));
 
-// KTA
-import KtaSubmitForm from './pages/kta/KtaSubmitForm';
-import KtaDetail from './pages/kta/KtaDetail';
-
-// License
-import ManageLicense from './pages/license/ManageLicense';
-
-// Kejurnas
-import KejurnasManage from './pages/kejurnas/KejurnasManage';
-
-// Notifications
-import NotificationPanel from './pages/notifications/NotificationPanel';
-
-// Config
-import KtaConfigPage from './pages/config/KtaConfigPage';
-import Reregistration from './pages/config/Reregistration';
-import ManageReregistration from './pages/config/ManageReregistration';
+const PageLoader = () => (
+  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', background: '#0c1222' }}>
+    <div style={{ width: 36, height: 36, border: '3px solid rgba(16,185,129,.3)', borderTopColor: '#10b981', borderRadius: '50%', animation: 'spin .7s linear infinite' }} />
+    <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
+  </div>
+);
 
 export default function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
         <Toaster position="top-right" toastOptions={{ duration: 3000 }} />
-        {/* <PwaInstallPrompt /> */}
+        <UpdateBanner />
+        <Suspense fallback={<PageLoader />}>
         <Routes>
           {/* Public routes */}
           <Route path="/" element={<Homepage />} />
@@ -96,6 +93,7 @@ export default function App() {
           {/* Catch-all */}
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
+        </Suspense>
       </AuthProvider>
     </BrowserRouter>
   );
