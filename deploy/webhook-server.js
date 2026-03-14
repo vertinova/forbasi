@@ -113,6 +113,14 @@ const server = http.createServer((req, res) => {
       return;
     }
 
+    // Handle GitHub ping event
+    const event = req.headers['x-github-event'] || '';
+    if (event === 'ping') {
+      console.log(`[webhook] Ping received: ${payload.zen || ''}`);
+      res.writeHead(200).end('pong');
+      return;
+    }
+
     const pushedBranch = (payload.ref || '').replace('refs/heads/', '');
     if (pushedBranch !== ALLOWED_BRANCH) {
       console.log(`[webhook] Ignored push to branch: ${pushedBranch}`);
