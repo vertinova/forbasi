@@ -229,7 +229,7 @@ router.post('/:region/login', validateApiKey, async (req, res) => {
 
     const rolesIn = ALLOWED_ROLES.join(',');
     const [users] = await db.query(
-      `${USER_SELECT}, u.password WHERE u.username = ? AND u.role_id IN (${rolesIn}) AND u.province_id = ?`,
+      `${USER_SELECT.replace('FROM users u', ', u.password FROM users u')} WHERE u.username = ? AND u.role_id IN (${rolesIn}) AND u.province_id = ?`,
       [username.trim(), cfg.province_id]
     );
 
