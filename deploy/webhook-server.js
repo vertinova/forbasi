@@ -32,6 +32,8 @@ const ALLOWED_BRANCH = process.env.WEBHOOK_BRANCH          || 'main';
 
 const BACKEND_DIR    = '/var/www/forbasi-pb-backend';
 const FRONTEND_DIR   = '/var/www/forbasi-pb-frontend';
+const STAGING_DIR    = '/var/www/_deploy-staging';
+const REPO_URL       = 'https://github.com/vertinova/forbasi.git';
 
 if (!SECRET) {
   console.error('[webhook] FATAL: WEBHOOK_SECRET env variable is not set. Exiting.');
@@ -41,19 +43,22 @@ if (!SECRET) {
 // ---------------------------------------------------------------------------
 // Deploy commands
 // ---------------------------------------------------------------------------
+// The repo has backend at forbasi-app/backend/ — pull to staging, rsync to target
 const DEPLOY_BACKEND = [
+  `mkdir -p ${STAGING_DIR}`,
+  `cd ${STAGING_DIR}`,
+  `(test -d .git && git fetch origin main && git reset --hard origin/main) || (rm -rf ${STAGING_DIR}/* && git clone --depth 1 --branch main ${REPO_URL} .)`,
+  `rsync -a --delete --exclude node_modules --exclude .env --exclude uploads forbasi-app/backend/ ${BACKEND_DIR}/`,
   `cd ${BACKEND_DIR}`,
-  'git pull origin main',
   'npm install --production',
   'npx prisma generate',
   'pm2 restart forbasi-pb-backend',
 ].join(' && ');
 
 const DEPLOY_FRONTEND = [
-  // Frontend dist is synced separately (npm run build + scp).
-  // Only pull here in case there are server-side assets in the repo.
-  `cd ${FRONTEND_DIR}`,
-  'git pull origin main 2>/dev/null || true',
+  // Frontend dist is built locally and synced via scp. Webhook only updates version.json.
+  `cd ${STAGING_DIR}`,
+  `cp -f forbasi-app/frontend/public/version.json ${FRONTEND_DIR}/dist/version.json 2>/dev/null || true`,
 ].join(' && ');
 
 function runDeploy(label, command) {
@@ -132,8 +137,9 @@ const server = http.createServer((req, res) => {
     console.log(`[webhook] Push to ${pushedBranch} by ${payload.pusher?.name || 'unknown'} — deploying...`);
     res.writeHead(200).end('Deploying');
 
-    // Run backend deploy; frontend deploy is best done manually via build+scp
+    // Deploy backend, then update frontend version.json
     runDeploy('backend', DEPLOY_BACKEND);
+    runDeploy('frontend', DEPLOY_FRONTEND);
   });
 });
 
