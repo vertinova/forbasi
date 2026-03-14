@@ -46,14 +46,14 @@ app.use(cors({
 // Rate limiting
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 200,
+  max: 1000,
   message: { success: false, message: 'Terlalu banyak request, coba lagi nanti.' }
 });
 app.use('/api/', limiter);
 
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 20,
+  max: 30,
   message: { success: false, message: 'Terlalu banyak percobaan login, coba lagi nanti.' }
 });
 app.use('/api/auth/login', authLimiter);
