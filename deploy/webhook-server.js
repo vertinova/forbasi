@@ -43,12 +43,12 @@ if (!SECRET) {
 // ---------------------------------------------------------------------------
 // Deploy commands
 // ---------------------------------------------------------------------------
-// The repo has backend at forbasi-app/backend/ — pull to staging, rsync to target
+// The repo has backend/ at the root — pull to staging, rsync to target
 const DEPLOY_BACKEND = [
   `mkdir -p ${STAGING_DIR}`,
   `cd ${STAGING_DIR}`,
   `(test -d .git && git fetch origin main && git reset --hard origin/main) || (rm -rf ${STAGING_DIR}/* && git clone --depth 1 --branch main ${REPO_URL} .)`,
-  `rsync -a --delete --exclude node_modules --exclude .env --exclude uploads forbasi-app/backend/ ${BACKEND_DIR}/`,
+  `rsync -a --delete --exclude node_modules --exclude .env --exclude uploads backend/ ${BACKEND_DIR}/`,
   `cd ${BACKEND_DIR}`,
   'npm install --production',
   'npx prisma generate',
@@ -58,7 +58,7 @@ const DEPLOY_BACKEND = [
 const DEPLOY_FRONTEND = [
   // Frontend dist is built locally and synced via scp. Webhook only updates version.json.
   `cd ${STAGING_DIR}`,
-  `cp -f forbasi-app/frontend/public/version.json ${FRONTEND_DIR}/dist/version.json 2>/dev/null || true`,
+  `cp -f frontend/public/version.json ${FRONTEND_DIR}/dist/version.json 2>/dev/null || true`,
 ].join(' && ');
 
 function runDeploy(label, command) {
