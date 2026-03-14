@@ -280,6 +280,73 @@ exports.getIssuedKtaList = async (req, res) => {
   }
 };
 
+// Export issued KTAs to Excel
+exports.exportIssuedKta = async (req, res) => {
+  try {
+    const ExcelJS = require('exceljs');
+    const { province_id, city_id, month, year, search } = req.query;
+    const filters = {};
+    if (province_id) filters.province_id = parseInt(province_id);
+    if (city_id) filters.city_id = parseInt(city_id);
+    if (month) filters.month = parseInt(month);
+    if (year) filters.year = parseInt(year);
+    if (search) filters.search = search;
+
+    const ktaList = await PbPayment.getIssuedKtaList(filters);
+
+    const workbook = new ExcelJS.Workbook();
+    const sheet = workbook.addWorksheet('KTA Terbit');
+
+    sheet.columns = [
+      { header: 'No', key: 'no', width: 6 },
+      { header: 'Nama Klub', key: 'club_name', width: 30 },
+      { header: 'Ketua', key: 'leader_name', width: 25 },
+      { header: 'Barcode', key: 'kta_barcode_unique_id', width: 25 },
+      { header: 'Provinsi (Pengda)', key: 'province_name', width: 22 },
+      { header: 'Kota/Kab (Pengcab)', key: 'city_name', width: 22 },
+      { header: 'Nominal Bayar (Rp)', key: 'nominal_paid', width: 20 },
+      { header: 'Tanggal Pengajuan', key: 'created_at', width: 22 },
+      { header: 'Tanggal Terbit', key: 'kta_issued_at', width: 22 },
+    ];
+
+    sheet.getRow(1).font = { bold: true, color: { argb: 'FFFFFFFF' } };
+    sheet.getRow(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF10B981' } };
+
+    const fmtDate = (d) => d ? new Date(d).toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '';
+
+    ktaList.forEach((kta, i) => {
+      sheet.addRow({
+        no: i + 1,
+        club_name: kta.club_name || '',
+        leader_name: kta.leader_name || '',
+        kta_barcode_unique_id: kta.kta_barcode_unique_id || '',
+        province_name: kta.province_name || '',
+        city_name: kta.city_name || '',
+        nominal_paid: kta.nominal_paid ? Number(kta.nominal_paid) : 0,
+        created_at: fmtDate(kta.created_at),
+        kta_issued_at: fmtDate(kta.kta_issued_at),
+      });
+    });
+
+    sheet.addRow({});
+    const totalRow = sheet.addRow({ club_name: `Total: ${ktaList.length} KTA` });
+    totalRow.font = { bold: true };
+
+    let filename = 'KTA_Terbit';
+    if (year) filename += `_${year}`;
+    if (month) filename += `_${month}`;
+    filename += `_${Date.now()}.xlsx`;
+
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    await workbook.xlsx.write(res);
+    res.end();
+  } catch (err) {
+    console.error('Export issued KTA error:', err);
+    return res.status(500).json({ success: false, message: 'Gagal export data KTA terbit' });
+  }
+};
+
 // ============ PENGDA BALANCE ENDPOINTS ============
 
 // Get balance summary for Pengda

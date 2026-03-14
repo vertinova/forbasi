@@ -58,6 +58,7 @@ export default function KtaSubmitForm({ onSuccess }) {
     if (!formData.club_name) missing.push('Nama Klub');
     if (!formData.province_id) missing.push('Provinsi');
     if (!formData.city_id) missing.push('Kota/Kabupaten');
+    if (!files.logo) missing.push('Logo Klub');
     if (!files.sk_file) missing.push('SK Pendirian Klub');
     if (!files.payment_proof) missing.push('Bukti Pembayaran');
     if (missing.length > 0) {
@@ -219,7 +220,7 @@ export default function KtaSubmitForm({ onSuccess }) {
         <div className="space-y-3">
           {[
             { name: 'sk_file', label: 'SK Pendirian Klub *', accept: '.jpg,.jpeg,.png,.pdf', required: true },
-            { name: 'logo', label: 'Logo Klub (opsional)', accept: '.jpg,.jpeg,.png', required: false },
+            { name: 'logo', label: 'Logo Klub *', accept: '.jpg,.jpeg,.png', required: true },
             { name: 'ad_file', label: 'AD/ART/SK (opsional)', accept: '.jpg,.jpeg,.png,.pdf', required: false },
             { name: 'payment_proof', label: 'Bukti Pembayaran *', accept: '.jpg,.jpeg,.png,.pdf', required: true },
           ].map(f => (

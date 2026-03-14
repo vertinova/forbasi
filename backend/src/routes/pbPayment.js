@@ -8,6 +8,7 @@ router.get('/saldo-summary', authenticate, authorize(4), pbPaymentController.get
 router.get('/recipient-details', authenticate, authorize(4), pbPaymentController.getRecipientDetails);
 router.get('/unpaid-amounts', authenticate, authorize(4), pbPaymentController.getTotalUnpaidAmounts);
 router.get('/issued-kta', authenticate, authorize(4), pbPaymentController.getIssuedKtaList);
+router.get('/export-issued-kta', authenticate, authorize(4), pbPaymentController.exportIssuedKta);
 router.post('/recap-payment', authenticate, authorize(4), paymentUpload.single('payment_proof_file'), handleUploadError, pbPaymentController.processRecapPayment);
 router.get('/history', authenticate, authorize(4), pbPaymentController.getPaymentHistory);
 router.get('/export-full-saldo', authenticate, authorize(4), pbPaymentController.exportFullSaldo);

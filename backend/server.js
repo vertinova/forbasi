@@ -21,6 +21,7 @@ const publicRoutes = require('./src/routes/public');
 const configRoutes = require('./src/routes/config');
 const regionalRoutes = require('./src/routes/regional');
 const pbPaymentRoutes = require('./src/routes/pbPayment');
+const landingRoutes = require('./src/routes/landing');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -62,14 +63,43 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(cookieParser());
 
-// Static files (uploads) — auto-regenerate missing KTA PDFs
+// Static files (uploads) — auto-regenerate missing KTA PDFs & fetch missing files from production
 app.use('/uploads', async (req, res, next) => {
-  // Only intercept generated_kta* PDF requests
+  const relPath = req.path.replace(/^\/+/, '');
+  const filePath = path.join(__dirname, 'uploads', relPath);
+  const fs = require('fs');
+
+  // If file exists locally, serve it directly
+  if (fs.existsSync(filePath)) return next();
+
+  // For kta_files (logos, documents) — try fetching from production server
+  if (req.path.startsWith('/kta_files/') || req.path.startsWith('/payment_proofs/')) {
+    try {
+      const prodUrl = `https://forbasi.or.id/forbasi/php/uploads${req.path}`;
+      const https = require('https');
+      const fetched = await new Promise((resolve, reject) => {
+        https.get(prodUrl, { timeout: 10000 }, (resp) => {
+          if (resp.statusCode !== 200) return reject(new Error(`Status ${resp.statusCode}`));
+          const chunks = [];
+          resp.on('data', c => chunks.push(c));
+          resp.on('end', () => resolve(Buffer.concat(chunks)));
+          resp.on('error', reject);
+        }).on('error', reject);
+      });
+      if (fetched.length > 0) {
+        const dir = path.dirname(filePath);
+        if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+        fs.writeFileSync(filePath, fetched);
+        return next();
+      }
+    } catch (err) {
+      // File not found on production either, continue to next handler
+    }
+  }
+
+  // Auto-regenerate missing KTA PDFs
   const match = req.path.match(/^\/generated_kta(?:_pb|_pengda)?\/(KTA_(?:PB_|Pengcab_|Pengda_)?(.+?)_(\d+)\.pdf)$/i);
   if (!match) return next();
-
-  const filePath = path.join(__dirname, 'uploads', req.path);
-  if (require('fs').existsSync(filePath)) return next();
 
   // File missing — try to regenerate
   try {
@@ -113,6 +143,7 @@ app.use('/api/public', publicRoutes);
 app.use('/api/config', configRoutes);
 app.use('/api/regional', regionalRoutes);
 app.use('/api/pb-payment', pbPaymentRoutes);
+app.use('/api/landing', landingRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {

@@ -140,5 +140,33 @@ router.get('/verify-kta/:barcode_id', async (req, res) => {
   }
 });
 
+// Public: Approved license holders (for katalog juri & pelatih)
+router.get('/licensed-members', async (req, res) => {
+  try {
+    const { type } = req.query; // 'juri' or 'pelatih'
+    let where = "la.status = 'approved'";
+    const params = [];
+    if (type === 'juri') {
+      where += " AND la.jenis_lisensi IN ('juri_muda', 'juri_madya')";
+    } else if (type === 'pelatih') {
+      where += " AND la.jenis_lisensi = 'pelatih'";
+    }
+
+    const [rows] = await db.query(
+      `SELECT la.id, la.nama_lengkap, la.jenis_lisensi, la.pas_foto, la.approved_at
+       FROM license_applications la
+       WHERE ${where}
+       ORDER BY la.approved_at DESC
+       LIMIT 50`,
+      params
+    );
+
+    return res.json({ success: true, data: rows });
+  } catch (err) {
+    console.error('Public licensed members error:', err);
+    return res.json({ success: true, data: [] });
+  }
+});
+
 module.exports = router;
 

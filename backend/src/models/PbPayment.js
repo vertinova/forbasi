@@ -261,6 +261,7 @@ const PbPayment = {
     let sql = `
       SELECT ka.id, ka.club_name, ka.leader_name, ka.kta_barcode_unique_id, ka.kta_issued_at,
              ka.generated_kta_file_path_pb, ka.amount_pb_to_pengda, ka.amount_pb_to_pengcab,
+             ka.nominal_paid, ka.created_at,
              p.name AS province_name, c.name AS city_name
       FROM kta_applications ka
       LEFT JOIN provinces p ON ka.province_id = p.id

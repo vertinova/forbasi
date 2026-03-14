@@ -35,6 +35,7 @@ import ManageLicense from '../license/ManageLicense';
 import KejurnasManage from '../kejurnas/KejurnasManage';
 import KtaConfigPage from '../config/KtaConfigPage';
 import ManageReregistration from '../config/ManageReregistration';
+import ManageLandingPage from '../landing/ManageLandingPage';
 import KtaDetailPanel from '../../components/common/KtaDetailPanel';
 import DocumentPreviewModal from '../../components/common/DocumentPreviewModal';
 
@@ -48,8 +49,7 @@ const SECTIONS = [
   { key: 'dashboard',  label: 'Dashboard',      icon: 'fa-tachometer-alt' },
   { key: 'kta',        label: 'Pengajuan KTA',  icon: 'fa-file-alt'       },
   { key: 'kta_terbit', label: 'KTA Terbit',     icon: 'fa-id-card'        },
-  { key: 'keuangan',   label: 'Keuangan',       icon: 'fa-wallet'         },
-  { key: 'transaksi',  label: 'Transaksi',      icon: 'fa-exchange-alt'   },
+
   { key: 'pengguna',   label: 'Pengguna',       icon: 'fa-users'          },
   { key: 'log',        label: 'Log Aktivitas',  icon: 'fa-history'        },
   { key: 'profil',     label: 'Profil',         icon: 'fa-user-cog'       },
@@ -58,6 +58,7 @@ const SECTIONS = [
   { key: 'kejurnas',      label: 'Kejurnas',         icon: 'fa-trophy'   },
   { key: 'kta_config',    label: 'Konfigurasi KTA',  icon: 'fa-cogs'     },
   { key: 'daftar_ulang',  label: 'Daftar Ulang',     icon: 'fa-redo'     },
+  { key: 'landing_page',  label: 'Landing Page',      icon: 'fa-palette'  },
 ];
 const ROLE_LABELS = { 1: 'Anggota', 2: 'Pengcab', 3: 'Pengda', 4: 'PB' };
 /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -208,31 +209,17 @@ export default function PbDashboard() {
   const [filterProvince, setFilterProvince]   = useState('');
   const [filterCity, setFilterCity]           = useState('');
 
-  /* Keuangan */
-  const [saldo, setSaldo]                       = useState(null);
-  const [saldoLoading, setSaldoLoading]         = useState(false);
-  const [recipientList, setRecipientList]       = useState([]);
-  const [recapModal, setRecapModal]             = useState({ show:false });
-  const [recapForm, setRecapForm]               = useState({
-    recipient_user_id:'', recipient_type:'pengda',
-    recap_month: String(new Date().getMonth()+1),
-    recap_year:  String(new Date().getFullYear()),
-    amount_paid:'', notes:'', file:null,
-  });
-  const [recapSubmitting, setRecapSubmitting]   = useState(false);
-  const [unpaidAmounts, setUnpaidAmounts]       = useState(null);
-  const [saldoFilterMonth, setSaldoFilterMonth] = useState('');
-  const [saldoFilterYear, setSaldoFilterYear]   = useState(String(new Date().getFullYear()));
+
 
   /* KTA Terbit */
   const [issuedKtas, setIssuedKtas]                   = useState([]);
   const [issuedKtaLoading, setIssuedKtaLoading]       = useState(false);
   const [issuedKtaPagination, setIssuedKtaPagination] = useState({ total:0, page:1, totalPages:1 });
   const [issuedSearch, setIssuedSearch]               = useState('');
+  const [issuedFilterMonth, setIssuedFilterMonth]     = useState('');
+  const [issuedFilterYear, setIssuedFilterYear]       = useState('');
 
-  /* Transaksi */
-  const [transactions, setTransactions] = useState([]);
-  const [txLoading, setTxLoading]       = useState(false);
+
 
   /* Pengguna */
   const [users, setUsers]                   = useState([]);
@@ -289,58 +276,25 @@ export default function PbDashboard() {
     try { const r = await api.get(`/users/cities/${pid}`); setCities(r.data.data || []); } catch { setCities([]); }
   }, []);
 
-  const fetchSaldo = useCallback(async () => {
-    setSaldoLoading(true);
-    try {
-      const params = {};
-      if (saldoFilterMonth) params.month = saldoFilterMonth;
-      if (saldoFilterYear)  params.year  = saldoFilterYear;
-      const [sR, uR] = await Promise.all([
-        api.get('/pb-payment/saldo-summary', { params }),
-        api.get('/pb-payment/unpaid-amounts', { params }),
-      ]);
-      setSaldo(sR.data.data);
-      setUnpaidAmounts(uR.data.data);
-    } catch { toast.error('Gagal memuat data keuangan'); }
-    finally { setSaldoLoading(false); }
-  }, [saldoFilterMonth, saldoFilterYear]);
+
 
   const fetchIssuedKtas = useCallback(async (page = 1) => {
     setIssuedKtaLoading(true);
     try {
       const params = { page, limit: 10 };
-      if (filterProvince) params.province_id = filterProvince;
-      if (filterCity)     params.city_id     = filterCity;
-      if (issuedSearch)   params.search      = issuedSearch;
+      if (filterProvince)    params.province_id = filterProvince;
+      if (filterCity)        params.city_id     = filterCity;
+      if (issuedFilterMonth) params.month       = issuedFilterMonth;
+      if (issuedFilterYear)  params.year        = issuedFilterYear;
+      if (issuedSearch)      params.search      = issuedSearch;
       const res = await api.get('/pb-payment/issued-kta', { params });
       setIssuedKtas(res.data.data?.issued_ktas || []);
       setIssuedKtaPagination(res.data.data?.pagination || { total:0, page:1, totalPages:1 });
     } catch { toast.error('Gagal memuat data KTA terbit'); }
     finally { setIssuedKtaLoading(false); }
-  }, [filterProvince, filterCity, issuedSearch]);
+  }, [filterProvince, filterCity, issuedFilterMonth, issuedFilterYear, issuedSearch]);
 
-  const fetchRecipientList = useCallback(async () => {
-    if (recipientList.length) return;
-    try {
-      const [pgdRes, pgcRes] = await Promise.all([
-        api.get('/users/list', { params: { role_id: 3, limit: 100 } }),
-        api.get('/users/list', { params: { role_id: 2, limit: 200 } }),
-      ]);
-      setRecipientList([
-        ...(pgdRes.data.data?.users || []).map(u => ({ ...u, _type:'pengda' })),
-        ...(pgcRes.data.data?.users || []).map(u => ({ ...u, _type:'pengcab' })),
-      ]);
-    } catch { /**/ }
-  }, [recipientList.length]);
 
-  const fetchTransactions = useCallback(async () => {
-    setTxLoading(true);
-    try {
-      const r = await api.get('/pb-payment/history', { params: { limit: 100 } });
-      setTransactions(r.data.data || []);
-    } catch { toast.error('Gagal memuat transaksi'); }
-    finally { setTxLoading(false); }
-  }, []);
 
   const fetchUsers = useCallback(async (pg = 1) => {
     setUsersLoading(true);
@@ -368,17 +322,16 @@ export default function PbDashboard() {
   useEffect(() => {
     if (activeSection === 'kta')        fetchKtaData(1);
     if (activeSection === 'kta_terbit') fetchIssuedKtas(1);
-    if (activeSection === 'keuangan')   { fetchSaldo(); fetchRecipientList(); }
-    if (activeSection === 'transaksi')  fetchTransactions();
+
     if (activeSection === 'pengguna')   fetchUsers(1);
     if (activeSection === 'log')        fetchActivityLog();
   }, [activeSection]); // eslint-disable-line
   // eslint-disable-next-line
   useEffect(() => { fetchCities(filterProvince); setFilterCity(''); }, [filterProvince]);
   // eslint-disable-next-line
-  useEffect(() => { if (activeSection === 'keuangan') fetchSaldo(); }, [saldoFilterMonth, saldoFilterYear]);
-  // eslint-disable-next-line
   useEffect(() => { if (activeSection === 'kta') fetchKtaData(1); }, [filterProvince, filterCity, activeTab]);
+  // eslint-disable-next-line
+  useEffect(() => { if (activeSection === 'kta_terbit') fetchIssuedKtas(1); }, [filterProvince, filterCity, issuedFilterMonth, issuedFilterYear]);
 
   /* ━━━━━ Handlers ━━━━━ */
   const handleUpdateStatus = async (id, status, extraNotes) => {
@@ -419,26 +372,6 @@ export default function PbDashboard() {
     finally { setRegeneratingKtaId(null); }
   };
 
-  const handleRecapSubmit = async (e) => {
-    e.preventDefault();
-    if (!recapForm.recipient_user_id) { toast.error('Pilih penerima'); return; }
-    if (!recapForm.file)              { toast.error('Bukti transfer wajib diunggah'); return; }
-    if (!recapForm.amount_paid)       { toast.error('Masukkan nominal'); return; }
-    setRecapSubmitting(true);
-    try {
-      const fd = new FormData();
-      Object.entries(recapForm).forEach(([k, v]) => {
-        if (k === 'file') fd.append('payment_proof_file', v);
-        else fd.append(k, v);
-      });
-      await api.post('/pb-payment/recap-payment', fd, { headers: { 'Content-Type': 'multipart/form-data' } });
-      toast.success('Rekap pembayaran berhasil disimpan');
-      setRecapModal({ show:false });
-      setRecapForm({ recipient_user_id:'', recipient_type:'pengda', recap_month: String(new Date().getMonth()+1), recap_year: String(new Date().getFullYear()), amount_paid:'', notes:'', file:null });
-      fetchSaldo();
-    } catch (err) { toast.error(err.response?.data?.message || 'Gagal'); }
-    finally { setRecapSubmitting(false); }
-  };
 
   const handleDeleteUser = async () => {
     try {
@@ -553,14 +486,11 @@ export default function PbDashboard() {
               </div>
               
               {/* New Modern Stat Cards */}
-              <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-4">
+              <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-3 gap-4">
                 {[
-                  { icon:'fa-users',          iconBg:'bg-gradient-to-br from-violet-500 to-violet-600',  shadowColor:'shadow-violet-500/25',  label:'Total Anggota',  value:stats.users?.total || 0 },
-                  { icon:'fa-hourglass-half',  iconBg:'bg-gradient-to-br from-amber-500 to-amber-600',   shadowColor:'shadow-amber-500/25',   label:'Menunggu PB',    value:stats.kta?.needs_pb_action||0, highlight:true },
-                  { icon:'fa-clock',           iconBg:'bg-gradient-to-br from-blue-500 to-blue-600',     shadowColor:'shadow-blue-500/25',    label:'Proses Pengcab', value:stats.kta?.pending || 0 },
+                  { icon:'fa-hourglass-half',  iconBg:'bg-gradient-to-br from-amber-500 to-amber-600',   shadowColor:'shadow-amber-500/25',   label:'Menunggu',       value:stats.kta?.needs_pb_action||0, highlight:true },
                   { icon:'fa-check-circle',    iconBg:'bg-gradient-to-br from-emerald-500 to-emerald-600',shadowColor:'shadow-emerald-500/25', label:'KTA Terbit',     value:stats.kta?.kta_issued || 0 },
-                  { icon:'fa-times-circle',    iconBg:'bg-gradient-to-br from-red-500 to-red-600',       shadowColor:'shadow-red-500/25',     label:'Ditolak',        value:stats.kta?.rejected || 0 },
-                  { icon:'fa-wallet',          iconBg:'bg-gradient-to-br from-cyan-500 to-cyan-600',     shadowColor:'shadow-cyan-500/25',    label:'Total Saldo',    value:formatRupiah(stats.balance?.total_saldo_masuk), isText:true },
+                  { icon:'fa-users',          iconBg:'bg-gradient-to-br from-violet-500 to-violet-600',  shadowColor:'shadow-violet-500/25',  label:'Total Anggota Resmi',  value:stats.users?.total || 0 },
                 ].map((stat,idx)=>(
                   <div key={idx} 
                     className={`relative group bg-[#141620] rounded-2xl p-4 border transition-all duration-300 hover:-translate-y-1 hover:bg-[#191c28] overflow-hidden
@@ -951,7 +881,72 @@ export default function PbDashboard() {
   );
 
   /* ── KTA Terbit ── */
+  const [issuedExporting, setIssuedExporting] = useState(false);
+
+  const handleExportIssuedKta = async () => {
+    setIssuedExporting(true);
+    try {
+      const params = {};
+      if (filterProvince)    params.province_id = filterProvince;
+      if (filterCity)        params.city_id     = filterCity;
+      if (issuedFilterMonth) params.month       = issuedFilterMonth;
+      if (issuedFilterYear)  params.year        = issuedFilterYear;
+      if (issuedSearch)      params.search      = issuedSearch;
+      const res = await api.get('/pb-payment/export-issued-kta', { params, responseType: 'blob' });
+      const url = window.URL.createObjectURL(new Blob([res.data]));
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `KTA_Terbit${issuedFilterYear ? '_' + issuedFilterYear : ''}${issuedFilterMonth ? '_' + issuedFilterMonth : ''}.xlsx`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+      toast.success('Export berhasil');
+    } catch { toast.error('Gagal export data'); }
+    finally { setIssuedExporting(false); }
+  };
+
   const renderKtaTerbitSection = () => (
+    <div className="space-y-4">
+      {/* Filter Bar */}
+      <div className="flex items-center gap-3 flex-wrap px-5 py-4 bg-[#141620] border border-white/[0.06] rounded-2xl">
+        <span className="flex items-center gap-2 text-[11px] font-bold text-gray-500 uppercase tracking-widest"><i className="fas fa-filter text-emerald-500"/>Filter</span>
+        <CustomSelect
+          value={filterProvince}
+          onChange={v=>{setFilterProvince(v);setFilterCity('');}}
+          options={[{value:'',label:'Semua Pengda'},...provinces.map(p=>({value:String(p.id),label:p.name}))]}
+          placeholder="Semua Pengda"
+          variant="filter"
+          className="min-w-[160px]"
+        />
+        <CustomSelect
+          value={filterCity}
+          onChange={v=>setFilterCity(v)}
+          options={[{value:'',label:'Semua Pengcab'},...cities.map(c=>({value:String(c.id),label:c.name}))]}
+          placeholder="Semua Pengcab"
+          variant="filter"
+          className="min-w-[160px]"
+          disabled={!filterProvince}
+        />
+        <CustomSelect
+          value={issuedFilterMonth}
+          onChange={v=>setIssuedFilterMonth(v)}
+          options={[{value:'',label:'Semua Bulan'},...Array.from({length:12},(_,i)=>({value:String(i+1),label:new Date(0,i).toLocaleString('id-ID',{month:'long'})}))]} 
+          placeholder="Semua Bulan"
+          variant="filter"
+          className="min-w-[140px]"
+        />
+        <CustomSelect
+          value={issuedFilterYear}
+          onChange={v=>setIssuedFilterYear(v)}
+          options={[{value:'',label:'Semua Tahun'},...Array.from({length:5},(_,i)=>{const y=new Date().getFullYear()-2+i;return{value:String(y),label:String(y)};})]} 
+          placeholder="Semua Tahun"
+          variant="filter"
+          className="min-w-[100px]"
+        />
+        <BtnGhost onClick={()=>{setFilterProvince('');setFilterCity('');setIssuedFilterMonth('');setIssuedFilterYear('');}} sm>Reset</BtnGhost>
+      </div>
+
     <Panel>
       <PanelHeader icon="fa-id-card" title="Daftar KTA Terbit" subtitle={`${issuedKtaPagination.total||0} KTA diterbitkan`}
         actions={<>
@@ -962,6 +957,10 @@ export default function PbDashboard() {
               className={`${SELECT} pl-8 w-52`}/>
           </div>
           <BtnPrimary onClick={()=>fetchIssuedKtas(1)} sm><i className="fas fa-search"/>Cari</BtnPrimary>
+          <BtnGhost onClick={handleExportIssuedKta} disabled={issuedExporting} sm>
+            <i className={`fas ${issuedExporting ? 'fa-spinner fa-spin' : 'fa-file-excel'}`}/>
+            {issuedExporting ? 'Exporting...' : 'Export Excel'}
+          </BtnGhost>
         </>}
       />
       {issuedKtaLoading ? <div className="py-16 flex justify-center"><LoadingSpinner/></div>
@@ -1019,189 +1018,7 @@ export default function PbDashboard() {
         )}
       <Pagination page={issuedKtaPagination.page} totalPages={issuedKtaPagination.totalPages} total={issuedKtaPagination.total} onPageChange={p=>fetchIssuedKtas(p)} itemName="KTA"/>
     </Panel>
-  );
-
-  /* ── Keuangan ── */
-  const renderKeuanganSection = () => {
-    const filteredRecipients = recipientList.filter(u=>u._type===recapForm.recipient_type);
-    return (
-      <div className="space-y-5">
-        {/* Filter Periode */}
-        <div className="flex items-center gap-3 flex-wrap px-5 py-4 bg-[#141620] border border-white/[0.06] rounded-2xl">
-          <span className="flex items-center gap-2 text-[11px] font-bold text-gray-500 uppercase tracking-widest"><i className="fas fa-calendar text-emerald-500"/>Periode</span>
-          <CustomSelect
-            value={saldoFilterMonth}
-            onChange={v=>setSaldoFilterMonth(v)}
-            options={[{value:'',label:'Semua Bulan'},...Array.from({length:12},(_,i)=>({value:String(i+1),label:new Date(0,i).toLocaleString('id-ID',{month:'long'})}))]} 
-            placeholder="Semua Bulan"
-            variant="filter"
-            className="min-w-[150px]"
-          />
-          <CustomSelect
-            value={saldoFilterYear}
-            onChange={v=>setSaldoFilterYear(v)}
-            options={Array.from({length:5},(_,i)=>{const y=new Date().getFullYear()-2+i;return{value:String(y),label:String(y)};})} 
-            variant="filter"
-            className="min-w-[100px]"
-          />
-          <BtnGhost onClick={()=>{setSaldoFilterMonth('');setSaldoFilterYear(String(new Date().getFullYear()));}} sm>Reset</BtnGhost>
-        </div>
-
-        {/* Saldo Cards */}
-        {saldoLoading ? <div className="py-12 flex justify-center"><LoadingSpinner/></div> : (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <StatCard icon="fa-arrow-down"  grad="from-emerald-500 to-emerald-600" accent="emerald" label="Saldo Masuk"  value={formatRupiah(saldo?.saldo_masuk)}  isText/>
-            <StatCard icon="fa-arrow-up"    grad="from-red-500 to-red-600"         accent="red"     label="Saldo Keluar" value={formatRupiah(saldo?.saldo_keluar)} isText/>
-            <StatCard icon="fa-wallet"      grad="from-indigo-500 to-indigo-600"   accent="violet"  label="Saldo Bersih" value={formatRupiah(saldo?.saldo_sisa)}   isText/>
-          </div>
-        )}
-
-        {/* Tagihan */}
-        {unpaidAmounts&&!saldoLoading&&(
-          <Panel>
-            <PanelHeader icon="fa-exclamation-circle" grad="from-red-500 to-red-600" title="Tagihan Belum Dibayar"/>
-            <div className="p-5 space-y-3">
-              {[
-                {label:'ke Pengda', amount:unpaidAmounts.hutang_pengda, count:unpaidAmounts.unpaid_kta_count_pengda, rate:35000, a:'violet'},
-                {label:'ke Pengcab',amount:unpaidAmounts.hutang_pengcab,count:unpaidAmounts.unpaid_kta_count_pengcab,rate:50000, a:'blue'},
-              ].map((h,i)=>(
-                <div key={i} className="flex items-center justify-between p-4 rounded-xl bg-white/[0.03] border border-white/[0.06] flex-wrap gap-3">
-                  <div>
-                    <p className="text-xs text-gray-500 mb-0.5">Belum Bayar {h.label}</p>
-                    <p className={`text-2xl font-bold ${h.a==='violet'?'text-violet-400':'text-blue-400'}`}>{formatRupiah(h.amount)}</p>
-                  </div>
-                  <span className={`px-3 py-1.5 rounded-xl text-xs font-semibold ${h.a==='violet'?'bg-violet-500/10 border border-violet-500/20 text-violet-400':'bg-blue-500/10 border border-blue-500/20 text-blue-400'}`}>
-                    {h.count} KTA × Rp {h.rate.toLocaleString('id-ID')}
-                  </span>
-                </div>
-              ))}
-              <div className="flex gap-4 flex-wrap px-4 py-3 bg-emerald-500/10 border border-emerald-500/20 rounded-xl text-xs text-gray-400">
-                <span><i className="fas fa-file-alt text-emerald-400 mr-1.5"/>Terbit: <strong className="text-white">{unpaidAmounts.total_issued_kta}</strong></span>
-                <span><i className="fas fa-code text-amber-400 mr-1.5"/>Developer: <strong className="text-white">{formatRupiah(unpaidAmounts.hutang_developer)}</strong></span>
-                <span><i className="fas fa-building text-cyan-400 mr-1.5"/>PB Net: <strong className="text-white">{formatRupiah(unpaidAmounts.pb_net)}</strong></span>
-              </div>
-            </div>
-          </Panel>
-        )}
-
-        {/* Rekap */}
-        <Panel>
-          <PanelHeader icon="fa-money-bill-wave" title="Rekap Pembayaran"
-            actions={<>
-              <BtnGhost href={`${import.meta.env.VITE_API_URL}/pb-payment/export-full-saldo`} target="_blank" rel="noreferrer" sm><i className="fas fa-file-excel"/>Export</BtnGhost>
-              <BtnPrimary onClick={()=>setRecapModal({show:true})} sm><i className="fas fa-plus"/>Proses Pembayaran</BtnPrimary>
-            </>}
-          />
-          <EmptyState icon="fa-hand-holding-usd" text="Klik 'Proses Pembayaran' untuk mencatat rekap"/>
-        </Panel>
-
-        {/* Modal */}
-        {recapModal.show&&(
-          <div className="fixed inset-0 bg-black/70 backdrop-blur-md z-50 flex items-center justify-center p-4"
-            onClick={e=>{if(e.target===e.currentTarget)setRecapModal({show:false});}}>
-            <div className="bg-[#141620] border border-white/[0.06] rounded-2xl p-6 w-full max-w-md max-h-[90vh] overflow-y-auto shadow-2xl">
-              <div className="flex items-center justify-between mb-5">
-                <div>
-                  <h3 className="text-base font-bold text-white m-0">Proses Rekap Pembayaran</h3>
-                  <p className="text-xs text-gray-500 m-0 mt-0.5">Catat pembayaran ke pengda / pengcab</p>
-                </div>
-                <button onClick={()=>setRecapModal({show:false})}
-                  className="w-8 h-8 rounded-xl bg-white/[0.05] border border-white/[0.08] text-gray-400 flex items-center justify-center hover:bg-white/[0.08] hover:text-white transition-all text-base">×</button>
-              </div>
-              <form onSubmit={handleRecapSubmit} className="space-y-4">
-                <div>
-                  <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1.5">Tipe Penerima</label>
-                  <CustomSelect
-                    value={recapForm.recipient_type}
-                    onChange={v=>setRecapForm(f=>({...f,recipient_type:v,recipient_user_id:''}))}
-                    options={[{value:'pengda',label:'Pengda'},{value:'pengcab',label:'Pengcab'}]}
-                  />
-                </div>
-                <div>
-                  <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1.5">Penerima</label>
-                  <CustomSelect
-                    value={recapForm.recipient_user_id}
-                    onChange={v=>setRecapForm(f=>({...f,recipient_user_id:v}))}
-                    options={[{value:'',label:'— Pilih —'},...filteredRecipients.map(u=>({value:String(u.id),label:u.club_name||u.username}))]}
-                    placeholder="— Pilih —"
-                  />
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1.5">Bulan</label>
-                    <CustomSelect
-                      value={recapForm.recap_month}
-                      onChange={v=>setRecapForm(f=>({...f,recap_month:v}))}
-                      options={Array.from({length:12},(_,i)=>({value:String(i+1),label:new Date(0,i).toLocaleString('id-ID',{month:'long'})}))}
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1.5">Tahun</label>
-                    <input type="number" value={recapForm.recap_year} min="2024" max="2030" onChange={e=>setRecapForm(f=>({...f,recap_year:e.target.value}))} className={INPUT}/>
-                  </div>
-                </div>
-                <div>
-                  <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1.5">Nominal (Rp)</label>
-                  <input type="number" value={recapForm.amount_paid} min="1" placeholder="350000" onChange={e=>setRecapForm(f=>({...f,amount_paid:e.target.value}))} className={INPUT}/>
-                </div>
-                <div>
-                  <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1.5">Catatan</label>
-                  <textarea value={recapForm.notes} rows={2} placeholder="Opsional…" onChange={e=>setRecapForm(f=>({...f,notes:e.target.value}))} className={INPUT+' resize-none'}/>
-                </div>
-                <div>
-                  <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1.5">Bukti Transfer <span className="text-red-400">*</span></label>
-                  <input type="file" accept=".jpg,.jpeg,.png,.pdf" onChange={e=>setRecapForm(f=>({...f,file:e.target.files[0]||null}))}
-                    className={`${INPUT} file:mr-3 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-xs file:bg-emerald-500/20 file:text-emerald-400`}/>
-                </div>
-                <div className="flex gap-2 pt-1">
-                  <BtnGhost onClick={()=>setRecapModal({show:false})} className="flex-1 justify-center">Batal</BtnGhost>
-                  <BtnPrimary type="submit" disabled={recapSubmitting} className="flex-1 justify-center">
-                    {recapSubmitting?<><i className="fas fa-spinner fa-spin"/>Menyimpan…</>:<><i className="fas fa-check"/>Proses</>}
-                  </BtnPrimary>
-                </div>
-              </form>
-            </div>
-          </div>
-        )}
-      </div>
-    );
-  };
-
-  /* ── Transaksi ── */
-  const renderTransaksiSection = () => (
-    <Panel>
-      <PanelHeader icon="fa-exchange-alt" grad="from-indigo-500 to-indigo-600" title="Riwayat Transaksi"
-        actions={<BtnGhost href={`${import.meta.env.VITE_API_URL}/pb-payment/export-full-saldo`} target="_blank" rel="noreferrer" sm><i className="fas fa-file-excel"/>Export</BtnGhost>}
-      />
-      {txLoading ? <div className="py-16 flex justify-center"><LoadingSpinner/></div>
-        : transactions.length===0 ? <EmptyState icon="fa-inbox" text="Belum ada transaksi"/>
-        : (
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="border-b border-white/[0.06]">
-                <tr>{['#','Tanggal','Tipe','Penerima','Wilayah','Nominal','Catatan'].map(c=><Th key={c}>{c}</Th>)}</tr>
-              </thead>
-              <tbody>
-                {transactions.map((tx,i)=>(
-                  <tr key={tx.id||i} className="border-b border-white/[0.04] hover:bg-white/[0.03] transition-colors">
-                    <Td><span className="text-gray-500 text-xs font-mono">{i+1}</span></Td>
-                    <Td><span className="text-gray-500 text-xs whitespace-nowrap">{tx.paid_at?new Date(tx.paid_at).toLocaleDateString('id-ID',{day:'2-digit',month:'short',year:'numeric'}):'—'}</span></Td>
-                    <Td><span className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-semibold rounded-full shadow-sm ${
-                      tx.recipient_type==='pengda'
-                        ? 'bg-violet-500 text-white shadow-violet-500/20'
-                        : 'bg-blue-500 text-white shadow-blue-500/20'
-                    }`}><i className={`fas ${tx.recipient_type==='pengda'?'fa-building':'fa-landmark'} text-[9px]`}/>{tx.recipient_type==='pengda'?'Pengda':'Pengcab'}</span></Td>
-                    <Td><span className="font-semibold text-white">{tx.recipient_name||'—'}</span></Td>
-                    <Td><span className="text-gray-500">{[tx.province_name,tx.city_name].filter(Boolean).join(' · ')||'—'}</span></Td>
-                    <Td><span className="font-bold text-red-400 whitespace-nowrap">{formatRupiah(tx.amount)}</span></Td>
-                    <Td><span className="text-gray-500">{tx.notes||'—'}</span></Td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-    </Panel>
+    </div>
   );
 
   /* ── Pengguna ── */
@@ -1348,8 +1165,7 @@ export default function PbDashboard() {
       {activeSection==='dashboard'   && renderDashboardSection()}
       {activeSection==='kta'         && renderKtaSection()}
       {activeSection==='kta_terbit'  && renderKtaTerbitSection()}
-      {activeSection==='keuangan'   && renderKeuanganSection()}
-      {activeSection==='transaksi'  && renderTransaksiSection()}
+
       {activeSection==='pengguna'   && renderPenggunaSection()}
       {activeSection==='log'        && renderLogSection()}
       {activeSection==='profil'     && renderProfilSection()}
@@ -1357,6 +1173,7 @@ export default function PbDashboard() {
       {activeSection==='kejurnas'    && <KejurnasManage embedded />}
       {activeSection==='kta_config'  && <KtaConfigPage embedded />}
       {activeSection==='daftar_ulang' && <ManageReregistration embedded />}
+      {activeSection==='landing_page'  && <ManageLandingPage embedded />}
       {activeSection==='kta_detail' && selectedAppId && (
         <KtaDetailPanel
           appId={selectedAppId}

@@ -340,12 +340,30 @@ const generateKtaPdf = async (application, options = {}) => {
     const offset8vh = mm(8 * vhToMm);        // PHP: $offset_8vh  ≈ 13.977mm
     const offsetMinus3vh = mm(-3 * vhToMm);  // PHP: $offset_min_3vh ≈ -5.241mm
 
-    // Background template
-    const bgPath = path.join(UPLOADS, 'config', 'kta_template_bg.png');
+    // Background template - check local first, then download from production if missing
+    const bgRelPath = 'config/kta_template_bg.png';
+    let bgPath = path.join(UPLOADS, bgRelPath);
+    if (!fs.existsSync(bgPath)) {
+      // Try to download from production backend uploads
+      const prodBgUrl = `https://forbasi.or.id/uploads/${bgRelPath}`;
+      console.log(`[KTA PDF] Background not found locally, downloading from: ${prodBgUrl}`);
+      if (downloadFileSync(prodBgUrl, bgPath)) {
+        console.log(`[KTA PDF] Background downloaded successfully: ${bgPath}`);
+      } else {
+        // Try PHP legacy path as fallback
+        const phpBgUrl = `${PROD_UPLOADS_URL}/${bgRelPath}`;
+        console.log(`[KTA PDF] Trying PHP legacy path: ${phpBgUrl}`);
+        downloadFileSync(phpBgUrl, bgPath);
+      }
+    }
     if (fs.existsSync(bgPath)) {
-      try { doc.image(bgPath, 0, 0, { width: PW, height: PH }); } catch {}
+      try { doc.image(bgPath, 0, 0, { width: PW, height: PH }); } catch (e) {
+        console.warn('[KTA PDF] Failed to load background image:', e.message);
+        doc.rect(0, 0, PW, PH).fill('#ffffff');
+      }
     } else {
       // Fallback solid background
+      console.warn('[KTA PDF] Background image not found locally or remotely, using white background');
       doc.rect(0, 0, PW, PH).fill('#ffffff');
     }
 
