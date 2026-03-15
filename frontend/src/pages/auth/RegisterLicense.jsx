@@ -33,22 +33,36 @@ export default function RegisterLicense() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
-    if (!form.username || !form.email || !form.password) { setError('Semua field wajib diisi'); return; }
+    
+    // Client-side validation with specific messages
+    if (!form.username.trim()) { setError('Username wajib diisi'); return; }
+    if (form.username.trim().length < 3) { setError('Username minimal 3 karakter'); return; }
+    if (!/^[a-zA-Z0-9_]+$/.test(form.username.trim())) { setError('Username hanya boleh huruf, angka, dan underscore'); return; }
+    if (!form.email.trim()) { setError('Email wajib diisi'); return; }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) { setError('Format email tidak valid'); return; }
+    if (!form.password) { setError('Password wajib diisi'); return; }
     if (form.password.length < 6) { setError('Password minimal 6 karakter'); return; }
-    if (form.password !== form.confirmPassword) { setError('Password tidak cocok'); return; }
+    if (form.password !== form.confirmPassword) { setError('Konfirmasi password tidak cocok'); return; }
 
     setLoading(true);
     try {
       await api.post('/auth/register-license', {
         username: form.username.trim(),
-        email: form.email.trim(),
+        email: form.email.trim().toLowerCase(),
         password: form.password,
         role: form.role
       });
       toast.success('Registrasi berhasil! Silakan login.');
       navigate('/login');
     } catch (err) {
-      setError(err.response?.data?.message || 'Registrasi gagal');
+      const errorMessage = err.response?.data?.message;
+      if (errorMessage) {
+        setError(errorMessage);
+      } else if (err.code === 'ERR_NETWORK') {
+        setError('Tidak dapat terhubung ke server. Periksa koneksi internet Anda.');
+      } else {
+        setError('Registrasi gagal. Silakan coba lagi.');
+      }
     } finally { setLoading(false); }
   };
 

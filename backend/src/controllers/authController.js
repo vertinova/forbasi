@@ -357,29 +357,56 @@ exports.registerLicenseUser = async (req, res) => {
   try {
     const { username, email, password, role } = req.body;
 
-    if (!username || !email || !password || !role) {
-      return res.status(400).json({ success: false, message: 'Semua field wajib diisi' });
+    // Validation with specific error messages
+    const errors = [];
+    if (!username || username.trim().length === 0) errors.push('Username wajib diisi');
+    if (!email || email.trim().length === 0) errors.push('Email wajib diisi');
+    if (!password) errors.push('Password wajib diisi');
+    if (!role) errors.push('Jenis akun wajib dipilih');
+    
+    if (errors.length > 0) {
+      return res.status(400).json({ success: false, message: errors.join(', '), errors });
+    }
+
+    // Email format validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return res.status(400).json({ success: false, message: 'Format email tidak valid' });
+    }
+
+    // Username validation
+    if (username.trim().length < 3) {
+      return res.status(400).json({ success: false, message: 'Username minimal 3 karakter' });
+    }
+    if (!/^[a-zA-Z0-9_]+$/.test(username.trim())) {
+      return res.status(400).json({ success: false, message: 'Username hanya boleh huruf, angka, dan underscore' });
+    }
+
+    // Password validation
+    if (password.length < 6) {
+      return res.status(400).json({ success: false, message: 'Password minimal 6 karakter' });
     }
 
     if (!['pelatih', 'juri'].includes(role)) {
-      return res.status(400).json({ success: false, message: 'Role tidak valid' });
+      return res.status(400).json({ success: false, message: 'Jenis akun tidak valid. Pilih Pelatih atau Juri' });
     }
 
-    // Check existing
-    const existingUser = await LicenseUser.findByUsername(username);
+    // Check existing username
+    const existingUser = await LicenseUser.findByUsername(username.trim());
     if (existingUser) {
-      return res.status(400).json({ success: false, message: 'Username sudah digunakan' });
+      return res.status(400).json({ success: false, message: `Username "${username}" sudah digunakan. Silakan pilih username lain.` });
     }
 
-    const existingEmail = await LicenseUser.findByEmail(email);
+    // Check existing email
+    const existingEmail = await LicenseUser.findByEmail(email.trim().toLowerCase());
     if (existingEmail) {
-      return res.status(400).json({ success: false, message: 'Email sudah digunakan' });
+      return res.status(400).json({ success: false, message: `Email "${email}" sudah terdaftar. Gunakan email lain atau login dengan akun yang sudah ada.` });
     }
 
     const hashedPassword = await bcrypt.hash(password, 12);
     const userId = await LicenseUser.create({
-      username,
-      email,
+      username: username.trim(),
+      email: email.trim().toLowerCase(),
       password: hashedPassword,
       role
     });
@@ -391,7 +418,25 @@ exports.registerLicenseUser = async (req, res) => {
     });
   } catch (err) {
     console.error('Register license user error:', err);
-    return res.status(500).json({ success: false, message: 'Terjadi kesalahan server' });
+    
+    // Handle Prisma unique constraint errors
+    if (err.code === 'P2002') {
+      const field = err.meta?.target?.[0] || 'field';
+      if (field === 'username') {
+        return res.status(400).json({ success: false, message: 'Username sudah digunakan. Silakan pilih username lain.' });
+      }
+      if (field === 'email') {
+        return res.status(400).json({ success: false, message: 'Email sudah terdaftar. Gunakan email lain.' });
+      }
+      return res.status(400).json({ success: false, message: `${field} sudah digunakan` });
+    }
+    
+    // Handle database connection errors
+    if (err.code === 'P1001' || err.code === 'P1002') {
+      return res.status(503).json({ success: false, message: 'Koneksi database gagal. Silakan coba beberapa saat lagi.' });
+    }
+    
+    return res.status(500).json({ success: false, message: 'Terjadi kesalahan server. Silakan coba lagi.' });
   }
 };
 

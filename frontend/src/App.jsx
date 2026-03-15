@@ -25,6 +25,7 @@ const LicenseUserDashboard = lazy(() => import('./pages/dashboard/LicenseUserDas
 const KtaSubmitForm = lazy(() => import('./pages/kta/KtaSubmitForm'));
 const KtaDetail = lazy(() => import('./pages/kta/KtaDetail'));
 const ManageLicense = lazy(() => import('./pages/license/ManageLicense'));
+const LicenseConfigPage = lazy(() => import('./pages/config/LicenseConfigPage'));
 const KejurnasManage = lazy(() => import('./pages/kejurnas/KejurnasManage'));
 const NotificationPanel = lazy(() => import('./pages/notifications/NotificationPanel'));
 const KtaConfigPage = lazy(() => import('./pages/config/KtaConfigPage'));
@@ -79,6 +80,7 @@ export default function App() {
           <Route path="/pb" element={<ProtectedRoute allowedRoles={[4]}><PbDashboard /></ProtectedRoute>} />
           <Route path="/pb/kta/:id" element={<ProtectedRoute allowedRoles={[4]}><KtaDetail /></ProtectedRoute>} />
           <Route path="/pb/license" element={<ProtectedRoute allowedRoles={[4]}><ManageLicense /></ProtectedRoute>} />
+          <Route path="/pb/license-config" element={<ProtectedRoute allowedRoles={[4]}><LicenseConfigPage /></ProtectedRoute>} />
           <Route path="/pb/notifications" element={<ProtectedRoute allowedRoles={[4]}><NotificationPanel /></ProtectedRoute>} />
           <Route path="/pb/kejurnas" element={<ProtectedRoute allowedRoles={[4]}><KejurnasManage /></ProtectedRoute>} />
           <Route path="/pb/kta-config" element={<ProtectedRoute allowedRoles={[4]}><KtaConfigPage /></ProtectedRoute>} />

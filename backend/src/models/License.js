@@ -33,12 +33,46 @@ const LicenseUser = {
   },
 };
 
-// license_applications table does not exist in current schema — stub methods
 const LicenseApplication = {
-  async findById() { return null; },
-  async findByUserId() { return []; },
-  async create() { return null; },
-  async update() { return false; },
+  async findById(id) {
+    const app = await prisma.license_applications.findUnique({
+      where: { id },
+      include: { license_user: { select: { username: true, full_name: true, email: true, phone: true, role: true } } }
+    });
+    if (!app) return null;
+    return {
+      ...normBigInt(app),
+      username: app.license_user?.username,
+      full_name: app.license_user?.full_name,
+      email: app.license_user?.email,
+      phone: app.license_user?.phone,
+      user_role: app.license_user?.role,
+      license_type: app.jenis_lisensi,
+      biaya_lisensi: app.biaya_lisensi ? Number(app.biaya_lisensi) : 0,
+    };
+  },
+
+  async findByUserId(userId) {
+    const apps = await prisma.license_applications.findMany({
+      where: { user_id: userId },
+      orderBy: { submitted_at: 'desc' },
+    });
+    return apps.map(a => ({
+      ...normBigInt(a),
+      license_type: a.jenis_lisensi,
+      biaya_lisensi: a.biaya_lisensi ? Number(a.biaya_lisensi) : 0,
+    }));
+  },
+
+  async create(data) {
+    const app = await prisma.license_applications.create({ data });
+    return app.id;
+  },
+
+  async update(id, data) {
+    await prisma.license_applications.update({ where: { id }, data });
+    return true;
+  },
 
   async findAll(filters = {}) {
     const conds = ['1=1'];
@@ -46,19 +80,20 @@ const LicenseApplication = {
     if (filters.status) { conds.push('la.status = ?'); args.push(filters.status); }
     if (filters.jenis_lisensi) { conds.push('la.jenis_lisensi = ?'); args.push(filters.jenis_lisensi); }
     if (filters.search) {
-      conds.push('(la.nama_lengkap LIKE ? OR la.email LIKE ? OR la.no_telepon LIKE ?)');
+      conds.push('(lu.full_name LIKE ? OR lu.username LIKE ? OR lu.email LIKE ?)');
       const s = `%${filters.search}%`;
       args.push(s, s, s);
     }
     try {
-      return await prisma.$queryRawUnsafe(
-        `SELECT la.*, lu.username, lu.role as user_role
+      const rows = await prisma.$queryRawUnsafe(
+        `SELECT la.*, la.jenis_lisensi as license_type, lu.username, lu.full_name, lu.email, lu.phone, lu.role as user_role
          FROM license_applications la
          JOIN license_users lu ON la.user_id = lu.id
          WHERE ${conds.join(' AND ')}
          ORDER BY la.submitted_at DESC`,
         ...args
       );
+      return rows.map(r => normBigInt(r));
     } catch { return []; }
   },
 
@@ -80,4 +115,25 @@ const LicenseApplication = {
   },
 };
 
-module.exports = { LicenseUser, LicenseApplication };
+const LicenseConfig = {
+  async findAll() {
+    const configs = await prisma.license_configs.findMany({ orderBy: { id: 'asc' } });
+    return configs.map(c => normBigInt(c));
+  },
+
+  async findByJenis(jenis_lisensi) {
+    const config = await prisma.license_configs.findUnique({ where: { jenis_lisensi } });
+    return config ? normBigInt(config) : null;
+  },
+
+  async upsert(jenis_lisensi, data) {
+    const result = await prisma.license_configs.upsert({
+      where: { jenis_lisensi },
+      update: { ...data, updated_at: new Date() },
+      create: { jenis_lisensi, ...data },
+    });
+    return normBigInt(result);
+  },
+};
+
+module.exports = { LicenseUser, LicenseApplication, LicenseConfig };

@@ -128,7 +128,7 @@ export default function Login() {
                 </Link>
                 <img src="/logo-forbasi.png" alt="FORBASI" className="auth-logo" />
                 <h1 className="auth-title">FORBASI</h1>
-                <p className="auth-subtitle">Federasi Olahraga Baris Berbaris Seluruh Indonesia</p>
+                <p className="auth-subtitle">Forum Baris Indonesia</p>
               </div>
 
               {loginError && (

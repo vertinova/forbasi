@@ -282,6 +282,54 @@ model kta_applications {
   pb_payment_recap_id              Int?
 }
 
+model license_applications {
+  id                     Int                              @id @default(autoincrement())
+  user_id                Int
+  nama_lengkap           String?                          @db.VarChar(255)
+  alamat                 String?                          @db.Text
+  jenis_lisensi          license_applications_jenis
+  akomodasi              license_applications_akomodasi?  @default(tanpa_kamar)
+  no_telepon             String?                          @db.VarChar(20)
+  email                  String?                          @db.VarChar(255)
+  pas_foto               String?                          @db.VarChar(500)
+  bukti_transfer         String?                          @db.VarChar(500)
+  surat_rekomendasi_pengda String?                        @db.VarChar(500)
+  surat_pengalaman       String?                          @db.VarChar(500)
+  sertifikat_tot         String?                          @db.VarChar(500)
+  surat_rekomendasi      String?                          @db.VarChar(500)
+  qr_code_path           String?                          @db.VarChar(500)
+  notes                  String?                          @db.Text
+  biaya_lisensi          Decimal?                         @default(0.00) @db.Decimal(15, 2)
+  status                 license_applications_status?     @default(pending)
+  alasan_penolakan       String?                          @db.Text
+  approved_by            Int?
+  approved_at            DateTime?                        @db.Timestamp(0)
+  submitted_at           DateTime?                        @default(now()) @db.Timestamp(0)
+  created_at             DateTime?                        @default(now()) @db.DateTime(0)
+  updated_at             DateTime?                        @default(now()) @db.Timestamp(0)
+  license_user           license_users                    @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([user_id], map: "idx_license_app_user")
+  @@index([status], map: "idx_license_app_status")
+  @@index([jenis_lisensi], map: "idx_license_app_jenis")
+}
+
+model license_configs {
+  id                 Int                          @id @default(autoincrement())
+  jenis_lisensi      license_applications_jenis   @unique(map: "unique_jenis")
+  nama_kegiatan      String                       @default("") @db.VarChar(255)
+  tempat             String                       @default("") @db.VarChar(500)
+  tanggal_mulai      DateTime?                    @db.Date
+  tanggal_selesai    DateTime?                    @db.Date
+  harga_tanpa_kamar  Decimal                      @default(0.00) @db.Decimal(15, 2)
+  harga_dengan_kamar Decimal                      @default(0.00) @db.Decimal(15, 2)
+  deskripsi          String?                      @db.Text
+  is_active          Boolean                      @default(true)
+  created_by         Int?
+  created_at         DateTime?                    @default(now()) @db.Timestamp(0)
+  updated_at         DateTime?                    @default(now()) @db.Timestamp(0)
+}
+
 model license_users {
   id         Int                 @id @default(autoincrement())
   username   String              @unique(map: "username") @db.VarChar(100)
@@ -294,6 +342,7 @@ model license_users {
   created_at DateTime?           @default(now()) @db.Timestamp(0)
   updated_at DateTime?           @default(now()) @updatedAt @db.Timestamp(0)
   last_login DateTime?           @db.DateTime(0)
+  applications license_applications[]
 }
 
 model notification_settings {
@@ -514,6 +563,24 @@ enum kejurnas_events_status {
 enum license_users_role {
   pelatih
   juri
+}
+
+enum license_applications_jenis {
+  pelatih
+  juri_muda
+  juri_madya
+}
+
+enum license_applications_akomodasi {
+  tanpa_kamar
+  dengan_kamar
+}
+
+enum license_applications_status {
+  pending
+  proses
+  approved
+  rejected
 }
 
 enum notification_templates_category {

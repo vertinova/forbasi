@@ -49,7 +49,9 @@ const ktaUpload = multer({
 // License file upload
 const licenseStorage = multer.diskStorage({
   destination: (req, file, cb) => {
-    cb(null, ensureDir(path.join(__dirname, '../../uploads/lisensi')));
+    // Create subdirectories based on field name
+    const subDir = file.fieldname || 'other';
+    cb(null, ensureDir(path.join(__dirname, `../../uploads/lisensi/${subDir}`)));
   },
   filename: (req, file, cb) => {
     cb(null, `lisensi_${generateFilename(file)}`);
@@ -59,7 +61,7 @@ const licenseStorage = multer.diskStorage({
 const licenseUpload = multer({
   storage: licenseStorage,
   fileFilter,
-  limits: { fileSize: parseInt(process.env.MAX_FILE_SIZE) || 2097152 }
+  limits: { fileSize: 5242880 } // 5MB for license documents
 });
 
 // Payment proof upload
