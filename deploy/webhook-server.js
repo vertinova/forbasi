@@ -56,14 +56,15 @@ const DEPLOY_BACKEND = [
 ].join(' && ');
 
 const DEPLOY_FRONTEND = [
-  // Frontend dist is built locally and synced via scp. Webhook only updates version.json.
-  `cd ${STAGING_DIR}`,
-  `cp -f frontend/public/version.json ${FRONTEND_DIR}/dist/version.json 2>/dev/null || true`,
+  `cd ${STAGING_DIR}/frontend`,
+  'npm install',
+  'npm run build',
+  `rsync -a --delete ${STAGING_DIR}/frontend/dist/ ${FRONTEND_DIR}/dist/`,
 ].join(' && ');
 
 function runDeploy(label, command) {
   console.log(`[webhook] Running deploy: ${label}`);
-  exec(command, { timeout: 120_000 }, (err, stdout, stderr) => {
+  exec(command, { timeout: 300_000 }, (err, stdout, stderr) => {
     if (err) {
       console.error(`[webhook] ${label} FAILED:`, stderr || err.message);
     } else {
