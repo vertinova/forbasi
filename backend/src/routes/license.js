@@ -42,6 +42,7 @@ router.get('/events', authenticate, licenseController.getEvents);
 router.get('/applications', authenticate, authorize(4), licenseController.getAllApplications);
 router.get('/applications/:id', authenticate, licenseController.getApplicationDetail);
 router.patch('/applications/:id/status', authenticate, authorize(4), licenseController.updateStatus);
+router.patch('/applications/:id/toggle-landing', authenticate, authorize(4), licenseController.toggleShowOnLanding);
 router.get('/stats', authenticate, authorize(4), licenseController.getStats);
 
 // License config endpoints

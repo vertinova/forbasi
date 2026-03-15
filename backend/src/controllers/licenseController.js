@@ -1,4 +1,4 @@
-const { LicenseApplication, LicenseConfig } = require('../models/License');
+const { LicenseApplication, LicenseConfig, LicenseUser } = require('../models/License');
 const { LicenseEvent } = require('../models/Common');
 const QRCode = require('qrcode');
 const crypto = require('crypto');
@@ -54,8 +54,12 @@ exports.submitApplication = async (req, res) => {
       return denganKamar ? 2250000 : 2000000;
     };
 
+    // Get user's full_name for nama_lengkap
+    const licenseUser = await LicenseUser.findById(userId);
+
     const appData = {
       user_id: userId,
+      nama_lengkap: licenseUser?.full_name || null,
       jenis_lisensi,
       akomodasi: akomodasi || 'tanpa_kamar',
       biaya_lisensi: hitungBiaya(),
@@ -196,6 +200,26 @@ exports.getEvents = async (req, res) => {
     return res.json({ success: true, data: events });
   } catch (err) {
     console.error('Get events error:', err);
+    return res.status(500).json({ success: false, message: 'Terjadi kesalahan server' });
+  }
+};
+
+// Toggle show_on_landing (PB Admin)
+exports.toggleShowOnLanding = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const app = await LicenseApplication.findById(parseInt(id));
+    if (!app) {
+      return res.status(404).json({ success: false, message: 'Pengajuan tidak ditemukan' });
+    }
+    if (app.status !== 'approved') {
+      return res.status(400).json({ success: false, message: 'Hanya pengajuan yang sudah approved bisa ditampilkan di landing page' });
+    }
+    const newValue = !app.show_on_landing;
+    await LicenseApplication.update(parseInt(id), { show_on_landing: newValue });
+    return res.json({ success: true, message: newValue ? 'Ditampilkan di landing page' : 'Dihapus dari landing page', data: { show_on_landing: newValue } });
+  } catch (err) {
+    console.error('Toggle show on landing error:', err);
     return res.status(500).json({ success: false, message: 'Terjadi kesalahan server' });
   }
 };

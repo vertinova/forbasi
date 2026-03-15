@@ -152,9 +152,12 @@ router.get('/licensed-members', async (req, res) => {
       where += " AND la.jenis_lisensi = 'pelatih'";
     }
 
+    where += " AND la.show_on_landing = 1";
+
     const [rows] = await db.query(
-      `SELECT la.id, la.nama_lengkap, la.jenis_lisensi, la.pas_foto, la.approved_at
+      `SELECT la.id, COALESCE(la.nama_lengkap, lu.full_name) AS nama_lengkap, la.jenis_lisensi, la.pas_foto, la.approved_at
        FROM license_applications la
+       LEFT JOIN license_users lu ON la.user_id = lu.id
        WHERE ${where}
        ORDER BY la.approved_at DESC
        LIMIT 50`,

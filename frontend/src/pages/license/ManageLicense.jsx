@@ -64,6 +64,15 @@ export default function ManageLicense({ embedded }) {
     } catch (err) { toast.error(err.response?.data?.message || 'Gagal'); }
   };
 
+  const handleToggleLanding = async (id) => {
+    try {
+      const res = await api.patch(`/license/applications/${id}/toggle-landing`);
+      toast.success(res.data.message);
+      setApplications(prev => prev.map(a => a.id === id ? { ...a, show_on_landing: res.data.data.show_on_landing ? 1 : 0 } : a));
+      if (detail?.id === id) setDetail(prev => ({ ...prev, show_on_landing: res.data.data.show_on_landing ? 1 : 0 }));
+    } catch (err) { toast.error(err.response?.data?.message || 'Gagal'); }
+  };
+
   const currentTab = TABS.find(t => t.key === activeTab);
   const filteredApps = applications.filter(app => {
     const jenis = app.license_type || app.jenis_lisensi || '';
@@ -222,6 +231,7 @@ export default function ManageLicense({ embedded }) {
                   <th className="px-4 py-3 text-left text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Akomodasi</th>
                   <th className="px-4 py-3 text-left text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Biaya</th>
                   <th className="px-4 py-3 text-left text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Status</th>
+                  <th className="px-4 py-3 text-center text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Landing</th>
                   <th className="px-4 py-3 text-left text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Tanggal</th>
                   <th className="px-4 py-3 text-left text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Aksi</th>
                 </tr>
@@ -237,6 +247,21 @@ export default function ManageLicense({ embedded }) {
                     <td className="px-4 py-3 text-gray-400 text-xs capitalize">{(app.akomodasi || '').replace('_', ' ')}</td>
                     <td className="px-4 py-3 text-gray-300 text-xs font-medium">{formatCurrency(app.biaya_lisensi)}</td>
                     <td className="px-4 py-3"><Badge status={app.status} /></td>
+                    <td className="px-4 py-3 text-center">
+                      {app.status === 'approved' ? (
+                        <button
+                          onClick={() => handleToggleLanding(app.id)}
+                          className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors border-none cursor-pointer ${
+                            app.show_on_landing ? 'bg-emerald-500/20 text-emerald-400' : 'bg-white/[0.05] text-gray-600 hover:text-gray-400'
+                          }`}
+                          title={app.show_on_landing ? 'Tampil di landing page' : 'Tidak tampil di landing page'}
+                        >
+                          <i className={`fas ${app.show_on_landing ? 'fa-globe' : 'fa-eye-slash'} text-xs`} />
+                        </button>
+                      ) : (
+                        <span className="text-gray-600 text-[10px]">—</span>
+                      )}
+                    </td>
                     <td className="px-4 py-3 text-gray-500 text-xs">{app.submitted_at ? new Date(app.submitted_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }) : '-'}</td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-1.5">
@@ -350,6 +375,17 @@ export default function ManageLicense({ embedded }) {
                     <i className="fas fa-times" /> Reject
                   </button>
                 </>
+              )}
+              {detail.status === 'approved' && (
+                <button onClick={() => handleToggleLanding(detail.id)}
+                  className={`inline-flex items-center gap-1.5 px-4 py-2 text-xs rounded-xl font-semibold active:scale-[0.97] transition-all border-none cursor-pointer ${
+                    detail.show_on_landing
+                      ? 'bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 hover:bg-emerald-500/20'
+                      : 'bg-white/[0.05] border border-white/[0.08] text-gray-400 hover:bg-white/[0.08]'
+                  }`} style={{ border: detail.show_on_landing ? '1px solid rgba(16,185,129,0.2)' : '1px solid rgba(255,255,255,0.08)' }}>
+                  <i className={`fas ${detail.show_on_landing ? 'fa-globe' : 'fa-eye-slash'}`} />
+                  {detail.show_on_landing ? 'Tampil di Landing' : 'Tampilkan di Landing'}
+                </button>
               )}
               <button onClick={() => setDetail(null)}
                 className="inline-flex items-center gap-1.5 px-4 py-2 text-xs rounded-xl bg-white/[0.05] border border-white/[0.08] text-gray-400 font-medium hover:bg-white/[0.08] hover:text-white active:scale-[0.97] transition-all ml-auto cursor-pointer">
