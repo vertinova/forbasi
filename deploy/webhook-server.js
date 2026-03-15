@@ -53,7 +53,6 @@ const DEPLOY_BACKEND = [
   `cd ${BACKEND_DIR}`,
   'npm install --production',
   'npx prisma generate',
-  'node scripts/setup_event_tables.js',
   'pm2 restart forbasi-pb-backend',
 ].join(' && ');
 
