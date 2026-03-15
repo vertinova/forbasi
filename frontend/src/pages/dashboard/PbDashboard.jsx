@@ -56,6 +56,8 @@ const SECTIONS = [
   { divider: true, dividerLabel: 'Fitur' },
   { key: 'lisensi',       label: 'Kelola Lisensi',   icon: 'fa-id-badge' },
   { key: 'kejurnas',      label: 'Kejurnas',         icon: 'fa-trophy'   },
+  { key: 'kejurcab_review', label: 'Perizinan Kejurcab', icon: 'fa-trophy' },
+  { key: 'event_review',    label: 'Perizinan Event',    icon: 'fa-calendar-check' },
   { key: 'kta_config',    label: 'Konfigurasi KTA',  icon: 'fa-cogs'     },
   { key: 'daftar_ulang',  label: 'Daftar Ulang',     icon: 'fa-redo'     },
   { key: 'landing_page',  label: 'Landing Page',      icon: 'fa-palette'  },
@@ -238,6 +240,18 @@ export default function PbDashboard() {
   const [pwForm, setPwForm]       = useState({ current:'', newPw:'', confirm:'' });
   const [pwLoading, setPwLoading] = useState(false);
 
+  /* Event Review */
+  const [pendingEvents, setPendingEvents]           = useState([]);
+  const [allEvents, setAllEvents]                   = useState([]);
+  const [pendingEventsLoading, setPendingEventsLoading] = useState(false);
+  const [allEventsLoading, setAllEventsLoading]     = useState(false);
+  const [selectedEvent, setSelectedEvent]           = useState(null);
+  const [eventActionNotes, setEventActionNotes]     = useState('');
+  const [eventActionLoading, setEventActionLoading] = useState(false);
+  const [eventTab, setEventTab]                     = useState('pending');
+  const [eventSearch, setEventSearch]               = useState('');
+  const [eventFilterStatus, setEventFilterStatus]   = useState('');
+
   /* ━━━━━ Fetchers ━━━━━ */
   const fetchKtaData = useCallback(async (page = 1) => {
     setLoading(true);
@@ -315,9 +329,67 @@ export default function PbDashboard() {
     finally { setLogLoading(false); }
   }, []);
 
+  const fetchPendingEvents = useCallback(async () => {
+    setPendingEventsLoading(true);
+    try {
+      const res = await api.get('/events/admin/pending');
+      setPendingEvents(res.data.data || []);
+    } catch { toast.error('Gagal memuat pengajuan event'); }
+    finally { setPendingEventsLoading(false); }
+  }, []);
+
+  const fetchAllEvents = useCallback(async (jenis) => {
+    setAllEventsLoading(true);
+    try {
+      const params = {};
+      if (eventSearch) params.search = eventSearch;
+      if (eventFilterStatus) params.status = eventFilterStatus;
+      if (jenis) params.jenis_pengajuan = jenis;
+      const res = await api.get('/events/admin/all', { params });
+      setAllEvents(res.data.data || []);
+    } catch { toast.error('Gagal memuat data event'); }
+    finally { setAllEventsLoading(false); }
+  }, [eventSearch, eventFilterStatus]);
+
+  const viewEventDetail = async (id) => {
+    try {
+      const res = await api.get(`/events/${id}`);
+      setSelectedEvent(res.data.data);
+    } catch { toast.error('Gagal memuat detail event'); }
+  };
+
+  const handleEventApprove = async (id) => {
+    setEventActionLoading(true);
+    try {
+      await api.post(`/events/admin/${id}/approve`, { notes: eventActionNotes });
+      toast.success('Event berhasil disetujui & surat rekomendasi digenerate');
+      const backSection = selectedEvent?.jenis_pengajuan === 'kejurcab' ? 'kejurcab_review' : 'event_review';
+      setSelectedEvent(null);
+      setEventActionNotes('');
+      setActiveSection(backSection);
+      fetchPendingEvents();
+    } catch (err) { toast.error(err.response?.data?.message || 'Gagal approve event'); }
+    finally { setEventActionLoading(false); }
+  };
+
+  const handleEventReject = async (id) => {
+    if (!eventActionNotes.trim()) return toast.error('Alasan penolakan wajib diisi');
+    setEventActionLoading(true);
+    try {
+      await api.post(`/events/admin/${id}/reject`, { reason: eventActionNotes });
+      toast.success('Event berhasil ditolak');
+      const backSection = selectedEvent?.jenis_pengajuan === 'kejurcab' ? 'kejurcab_review' : 'event_review';
+      setSelectedEvent(null);
+      setEventActionNotes('');
+      setActiveSection(backSection);
+      fetchPendingEvents();
+    } catch (err) { toast.error(err.response?.data?.message || 'Gagal reject event'); }
+    finally { setEventActionLoading(false); }
+  };
+
   /* ━━━━━ Effects ━━━━━ */
   // eslint-disable-next-line
-  useEffect(() => { fetchKtaData(1); fetchProvinces(); }, []);
+  useEffect(() => { fetchKtaData(1); fetchProvinces(); fetchPendingEvents(); }, []);
   // eslint-disable-next-line
   useEffect(() => {
     if (activeSection === 'kta')        fetchKtaData(1);
@@ -325,6 +397,8 @@ export default function PbDashboard() {
 
     if (activeSection === 'pengguna')   fetchUsers(1);
     if (activeSection === 'log')        fetchActivityLog();
+    if (activeSection === 'kejurcab_review') { setEventTab('pending'); setEventSearch(''); setEventFilterStatus(''); fetchPendingEvents(); fetchAllEvents('kejurcab'); }
+    if (activeSection === 'event_review') { setEventTab('pending'); setEventSearch(''); setEventFilterStatus(''); fetchPendingEvents(); fetchAllEvents('event_penyelenggara'); }
   }, [activeSection]); // eslint-disable-line
   // eslint-disable-next-line
   useEffect(() => { fetchCities(filterProvince); setFilterCity(''); }, [filterProvince]);
@@ -421,7 +495,10 @@ export default function PbDashboard() {
       icon:   <i className={`fas ${s.icon}`} />,
       onClick: () => setActiveSection(s.key),
       active:  activeSection === s.key,
-      badge:   s.key === 'kta' && tabCounts.needs_pb_action > 0 ? tabCounts.needs_pb_action : null,
+      badge:   s.key === 'kta' && tabCounts.needs_pb_action > 0 ? tabCounts.needs_pb_action
+             : s.key === 'kejurcab_review' && pendingEvents.filter(e => e.jenis_pengajuan === 'kejurcab').length > 0 ? pendingEvents.filter(e => e.jenis_pengajuan === 'kejurcab').length
+             : s.key === 'event_review' && pendingEvents.filter(e => e.jenis_pengajuan === 'event_penyelenggara').length > 0 ? pendingEvents.filter(e => e.jenis_pengajuan === 'event_penyelenggara').length
+             : null,
     };
   });
 
@@ -1127,6 +1204,404 @@ export default function PbDashboard() {
     </Panel>
   );
 
+  /* ══════════════════════════════════════
+     EVENT REVIEW — Perizinan & Rekomendasi
+  ══════════════════════════════════════ */
+  const EVENT_STATUS_MAP = {
+    draft:            { label:'Draft',             dot:'bg-gray-400',    ring:'ring-gray-400/20',    bg:'bg-white/[0.05]',      text:'text-gray-400' },
+    submitted:        { label:'Menunggu Review',   dot:'bg-amber-400',   ring:'ring-amber-400/20',   bg:'bg-amber-500/10',      text:'text-amber-400' },
+    approved_pengcab: { label:'Disetujui Pengcab', dot:'bg-blue-400',    ring:'ring-blue-400/20',    bg:'bg-blue-500/10',       text:'text-blue-400' },
+    rejected_pengcab: { label:'Ditolak Pengcab',   dot:'bg-red-500',     ring:'ring-red-500/20',     bg:'bg-red-500/10',        text:'text-red-400' },
+    approved_admin:   { label:'Disetujui PB',      dot:'bg-emerald-500', ring:'ring-emerald-500/20', bg:'bg-emerald-500/10',    text:'text-emerald-400' },
+    rejected_admin:   { label:'Ditolak PB',        dot:'bg-red-500',     ring:'ring-red-500/20',     bg:'bg-red-500/10',        text:'text-red-400' },
+  };
+  const eventBadge = (status) => {
+    const s = EVENT_STATUS_MAP[status] || { label: status, dot:'bg-gray-400', ring:'ring-gray-400/20', bg:'bg-white/[0.05]', text:'text-gray-400' };
+    return (
+      <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-semibold rounded-full ring-1 ${s.ring} ${s.bg} ${s.text}`}>
+        <span className={`w-1.5 h-1.5 rounded-full ${s.dot}`}/>{s.label}
+      </span>
+    );
+  };
+
+  const JENIS_MAP = {
+    kejurcab:            { label:'Kejurcab',          icon:'fa-trophy',     color:'text-amber-400',  bg:'bg-amber-500/10' },
+    event_penyelenggara: { label:'Event Penyelenggara',icon:'fa-calendar-alt',color:'text-blue-400', bg:'bg-blue-500/10' },
+  };
+
+  const renderEventSection = (jenisFilter) => {
+    const cfg = {
+      kejurcab:            { title: 'Perizinan Kejurcab',         subtitle: 'Kelola perizinan event kejurcab',        icon: 'fa-trophy',         gradient: 'from-amber-500 to-amber-600', shadow: 'shadow-amber-500/25', emptyIcon: 'fa-trophy',         emptyColor: 'bg-amber-500/10 text-amber-400' },
+      event_penyelenggara: { title: 'Perizinan Event Reguler',    subtitle: 'Kelola perizinan event penyelenggara',   icon: 'fa-calendar-check', gradient: 'from-indigo-500 to-indigo-600', shadow: 'shadow-indigo-500/25', emptyIcon: 'fa-calendar-check', emptyColor: 'bg-indigo-500/10 text-indigo-400' },
+    }[jenisFilter];
+
+    const isAllTab = eventTab === 'all';
+    const filteredPending = pendingEvents.filter(e => e.jenis_pengajuan === jenisFilter);
+    const events = isAllTab ? allEvents : filteredPending;
+    const isLoading = isAllTab ? allEventsLoading : pendingEventsLoading;
+
+    return (
+      <div className="space-y-5">
+        {/* Header */}
+        <div className="flex items-center justify-between flex-wrap gap-3">
+          <div className="flex items-center gap-3">
+            <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${cfg.gradient} flex items-center justify-center shadow-lg ${cfg.shadow} flex-shrink-0`}>
+              <i className={`fas ${cfg.icon} text-white text-sm`}/>
+            </div>
+            <div>
+              <h2 className="m-0 text-base font-bold text-white leading-tight">{cfg.title}</h2>
+              <p className="m-0 mt-0.5 text-[11px] text-gray-500">{cfg.subtitle}</p>
+            </div>
+          </div>
+          {filteredPending.length > 0 && (
+            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-full bg-amber-500/10 text-amber-400 ring-1 ring-amber-500/20 animate-pulse">
+              <i className="fas fa-bell"/>{filteredPending.length} menunggu review
+            </span>
+          )}
+        </div>
+
+        {/* Tabs: Pending / Semua */}
+        <div className="flex gap-2">
+          {[
+            { key:'pending', label:'Menunggu Review', icon:'fa-hourglass-half', count: filteredPending.length },
+            { key:'all',     label:'Semua',           icon:'fa-list',           count: allEvents.length },
+          ].map(t => (
+            <button key={t.key} onClick={() => setEventTab(t.key)}
+              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all border cursor-pointer
+                ${eventTab === t.key
+                  ? `bg-gradient-to-br ${cfg.gradient} text-white border-transparent shadow-lg ${cfg.shadow.replace('shadow-','shadow-')}/20`
+                  : 'bg-white/[0.04] border-white/[0.06] text-gray-400 hover:bg-white/[0.08] hover:text-white'}`}>
+              <i className={`fas ${t.icon} text-xs`}/>
+              {t.label}
+              {t.count > 0 && (
+                <span className={`ml-1 px-1.5 py-0.5 text-[10px] font-bold rounded-full ${eventTab === t.key ? 'bg-white/20 text-white' : 'bg-white/[0.08] text-gray-500'}`}>
+                  {t.count}
+                </span>
+              )}
+            </button>
+          ))}
+        </div>
+
+        {/* Filter bar (only for "all" tab) */}
+        {isAllTab && (
+          <div className="flex items-center gap-2 flex-wrap p-3 bg-white/[0.03] border border-white/[0.06] rounded-2xl">
+            <div className="flex-1 min-w-[140px]">
+              <input type="text" placeholder="Cari nama event..." className={INPUT} value={eventSearch}
+                onChange={e => setEventSearch(e.target.value)} />
+            </div>
+            <CustomSelect value={eventFilterStatus} onChange={v => setEventFilterStatus(v)}
+              options={[
+                {value:'',label:'Semua Status'},
+                {value:'submitted',label:'Menunggu Review'},
+                ...(jenisFilter === 'event_penyelenggara' ? [{value:'approved_pengcab',label:'Disetujui Pengcab'}] : []),
+                {value:'approved_admin',label:'Disetujui PB'},
+                {value:'rejected_admin',label:'Ditolak PB'},
+                ...(jenisFilter === 'event_penyelenggara' ? [{value:'rejected_pengcab',label:'Ditolak Pengcab'}] : []),
+              ]}
+              placeholder="Semua Status" icon="tasks" variant="filter" className="min-w-[150px]" />
+            <BtnPrimary sm onClick={() => fetchAllEvents(jenisFilter)}>
+              <i className="fas fa-search"/>Cari
+            </BtnPrimary>
+            <BtnGhost sm onClick={() => { setEventSearch(''); setEventFilterStatus(''); }}>
+              Reset
+            </BtnGhost>
+          </div>
+        )}
+
+        {/* Event list */}
+        <Panel>
+          <CardBody>
+            {isLoading ? (
+              <div className="py-16 flex justify-center"><LoadingSpinner/></div>
+            ) : events.length === 0 ? (
+              <div className="py-16 text-center">
+                <div className={`w-16 h-16 rounded-2xl ${cfg.emptyColor.split(' ')[0]} flex items-center justify-center mx-auto mb-4`}>
+                  <i className={`fas ${cfg.emptyIcon} text-2xl ${cfg.emptyColor.split(' ')[1]}`}/>
+                </div>
+                <p className="text-gray-400 text-sm m-0">
+                  {isAllTab ? 'Belum ada data event' : 'Tidak ada event yang menunggu review'}
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {events.map(ev => {
+                  const jenis = JENIS_MAP[ev.jenis_pengajuan] || JENIS_MAP.event_penyelenggara;
+                  return (
+                    <div key={ev.id}
+                      onClick={() => { viewEventDetail(ev.id); setActiveSection('event_review_detail'); }}
+                      className="flex items-center gap-4 p-4 rounded-xl bg-white/[0.02] border border-white/[0.06] hover:bg-white/[0.05] hover:border-white/[0.1] transition-all cursor-pointer group">
+
+                      {/* Icon */}
+                      <div className={`w-10 h-10 rounded-xl ${jenis.bg} flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform`}>
+                        <i className={`fas ${jenis.icon} ${jenis.color} text-sm`}/>
+                      </div>
+
+                      {/* Info */}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-0.5 flex-wrap">
+                          <h3 className="text-white font-semibold text-sm m-0 truncate">{ev.nama_event}</h3>
+                        </div>
+                        <p className="text-gray-500 text-xs m-0 truncate">
+                          <span className="text-amber-400/80">{ev.nama_organisasi || ev.username}</span>
+                          {ev.province_name && <><span className="mx-1.5">•</span>{ev.city_name || ev.province_name}</>}
+                          <span className="mx-1.5">•</span>
+                          <i className="fas fa-calendar mr-1"/>{new Date(ev.tanggal_mulai).toLocaleDateString('id-ID',{ day:'numeric', month:'short', year:'numeric' })}
+                        </p>
+                      </div>
+
+                      {/* Status */}
+                      <div className="flex-shrink-0">
+                        {eventBadge(ev.status)}
+                      </div>
+                      <i className="fas fa-chevron-right text-gray-600 text-xs flex-shrink-0 group-hover:text-gray-400 transition-colors"/>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </CardBody>
+        </Panel>
+      </div>
+    );
+  };
+
+  const renderEventReviewDetail = () => {
+    const ev = selectedEvent;
+    const uploadsBase = `${API_BASE}/uploads/event_files/`;
+    const canAction = (ev.jenis_pengajuan === 'kejurcab' && ev.status === 'submitted')
+                   || (ev.jenis_pengajuan === 'event_penyelenggara' && ev.status === 'approved_pengcab');
+
+    const persyaratanLabels = {
+      suratIzinSekolah:       'Surat Izin Sekolah/Instansi',
+      suratIzinKepolisian:    'Surat Izin Kepolisian',
+      suratRekomendasiDinas:  'Surat Rekomendasi Dinas',
+      suratIzinVenue:         'Surat Izin Venue',
+      suratRekomendasiPPI:    'Surat Rekomendasi PPI',
+      fotoLapangan:           'Foto Lapangan',
+      fotoTempatIbadah:       'Foto Tempat Ibadah',
+      fotoBarak:              'Foto Barak',
+      fotoAreaParkir:         'Foto Area Parkir',
+      fotoRuangKesehatan:     'Foto Ruang Kesehatan',
+      fotoMCK:                'Foto MCK',
+      fotoTempatSampah:       'Foto Tempat Sampah',
+      fotoRuangKomisi:        'Foto Ruang Komisi',
+      faktaIntegritasKomisi:  'Fakta Integritas Komisi',
+      faktaIntegritasHonor:   'Fakta Integritas Honor',
+      faktaIntegritasPanitia: 'Fakta Integritas Panitia',
+      desainSertifikat:       'Desain Sertifikat',
+    };
+
+    const persyaratan = ev.persyaratan ? (typeof ev.persyaratan === 'string' ? JSON.parse(ev.persyaratan) : ev.persyaratan) : {};
+    const mataLomba = ev.mata_lomba ? (typeof ev.mata_lomba === 'string' ? JSON.parse(ev.mata_lomba) : ev.mata_lomba) : [];
+    const jenis = JENIS_MAP[ev.jenis_pengajuan] || JENIS_MAP.event_penyelenggara;
+
+    return (
+      <div className="space-y-5">
+        {/* Back */}
+        <button className="inline-flex items-center gap-2 text-sm text-gray-400 hover:text-emerald-400 transition-colors bg-transparent border-none cursor-pointer p-0"
+          onClick={() => { const back = ev.jenis_pengajuan === 'kejurcab' ? 'kejurcab_review' : 'event_review'; setSelectedEvent(null); setActiveSection(back); }}>
+          <i className="fas fa-arrow-left text-xs"/>Kembali
+        </button>
+
+        {/* Header card */}
+        <Panel>
+          <div className="p-6">
+            <div className="flex items-start justify-between gap-4 flex-wrap mb-5">
+              <div className="flex items-start gap-4">
+                <div className={`w-12 h-12 rounded-2xl ${jenis.bg} flex items-center justify-center flex-shrink-0`}>
+                  <i className={`fas ${jenis.icon} ${jenis.color} text-lg`}/>
+                </div>
+                <div>
+                  <h2 className="text-lg font-bold text-white m-0">{ev.nama_event}</h2>
+                  <p className="text-gray-500 text-sm m-0 mt-1">
+                    <span className={`${jenis.color}`}>{jenis.label}</span>
+                    <span className="mx-2">—</span>
+                    <span className="text-amber-400">{ev.user?.club_name || ev.nama_organisasi || ''}</span>
+                  </p>
+                </div>
+              </div>
+              {eventBadge(ev.status)}
+            </div>
+
+            {/* Info grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 mb-6">
+              {[
+                { icon:'fa-map-marker-alt', label:'Lokasi',     value: ev.lokasi },
+                { icon:'fa-calendar',       label:'Tanggal',    value: `${new Date(ev.tanggal_mulai).toLocaleDateString('id-ID')} - ${new Date(ev.tanggal_selesai).toLocaleDateString('id-ID')}` },
+                ev.penyelenggara && { icon:'fa-building', label:'Penyelenggara', value: ev.penyelenggara },
+                ev.kontak_person && { icon:'fa-phone',    label:'Kontak',        value: ev.kontak_person },
+                ev.province_name && { icon:'fa-globe',    label:'Wilayah',       value: `${ev.city_name || ''} ${ev.province_name}`.trim() },
+              ].filter(Boolean).map(r => (
+                <div key={r.label} className="flex items-start gap-3 p-3 rounded-xl bg-white/[0.03] border border-white/[0.04]">
+                  <i className={`fas ${r.icon} text-gray-500 text-xs mt-0.5`}/>
+                  <div className="min-w-0">
+                    <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider m-0">{r.label}</p>
+                    <p className="text-sm text-gray-200 m-0 mt-0.5">{r.value}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Deskripsi */}
+            {ev.deskripsi && (
+              <div className="mb-6">
+                <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider m-0 mb-1.5">Deskripsi</p>
+                <p className="text-gray-300 text-sm m-0 whitespace-pre-wrap leading-relaxed">{ev.deskripsi}</p>
+              </div>
+            )}
+
+            {/* Mata Lomba */}
+            {mataLomba.length > 0 && (
+              <div className="mb-6">
+                <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider m-0 mb-2">Mata Lomba ({mataLomba.length})</p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {mataLomba.map((m, i) => (
+                    <div key={i} className="flex items-center gap-3 px-3 py-2.5 bg-white/[0.03] rounded-xl border border-white/[0.04]">
+                      <span className="w-6 h-6 rounded-lg bg-emerald-500/15 text-emerald-400 text-[11px] font-bold flex items-center justify-center flex-shrink-0">{i + 1}</span>
+                      <span className="text-gray-200 text-sm flex-1 truncate">{m.nama}</span>
+                      {m.tanggal && <span className="text-gray-500 text-[11px] flex-shrink-0">{m.tanggal}</span>}
+                      {m.waktu && <span className="text-gray-600 text-[11px] flex-shrink-0">{m.waktu}</span>}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Persyaratan */}
+            {Object.keys(persyaratan).length > 0 && (
+              <div className="mb-6">
+                <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider m-0 mb-2">Persyaratan & Dokumen</p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                  {Object.entries(persyaratan).map(([key, val]) => {
+                    if (!val || key === 'namaJuri') return null;
+                    const label = persyaratanLabels[key] || key;
+                    const isFile = typeof val === 'string' && (val.endsWith('.pdf') || val.endsWith('.jpg') || val.endsWith('.png') || val.endsWith('.jpeg') || val.includes('/'));
+                    const isBool = typeof val === 'boolean';
+                    return (
+                      <div key={key} className="flex items-center gap-2.5 px-3 py-2.5 bg-white/[0.03] rounded-xl border border-white/[0.04]">
+                        <i className={`fas ${isFile ? 'fa-file-alt text-blue-400' : isBool ? 'fa-check-circle text-emerald-400' : 'fa-info-circle text-gray-500'} text-xs flex-shrink-0`}/>
+                        <span className="text-gray-300 text-sm flex-1 truncate">{label}</span>
+                        {isFile ? (
+                          <a href={`${uploadsBase}${key}/${val}`} target="_blank" rel="noreferrer"
+                            className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-blue-500/10 text-blue-400 text-[11px] font-semibold hover:bg-blue-500/20 transition-all no-underline flex-shrink-0">
+                            <i className="fas fa-eye text-[9px]"/>Lihat
+                          </a>
+                        ) : !isBool ? (
+                          <span className="text-gray-400 text-xs flex-shrink-0 max-w-[120px] truncate" title={String(val)}>{String(val)}</span>
+                        ) : null}
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Juri list if present */}
+                {persyaratan.namaJuri && persyaratan.namaJuri.length > 0 && (
+                  <div className="mt-3">
+                    <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider m-0 mb-2">Daftar Juri</p>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      {persyaratan.namaJuri.map((j, i) => (
+                        <div key={i} className="flex items-center gap-2.5 px-3 py-2 bg-white/[0.03] rounded-xl border border-white/[0.04]">
+                          <div className="w-7 h-7 rounded-lg bg-violet-500/15 text-violet-400 text-[11px] font-bold flex items-center justify-center flex-shrink-0">{i + 1}</div>
+                          <div className="min-w-0">
+                            <p className="text-gray-200 text-sm m-0 truncate">{j.nama || '-'}</p>
+                            <p className="text-gray-500 text-[11px] m-0">{j.posisi || '-'}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Dokumen Upload (proposal, poster, etc) */}
+            {(ev.proposal_kegiatan || ev.poster || ev.surat_izin_tempat) && (
+              <div className="mb-6">
+                <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider m-0 mb-2">Dokumen Upload</p>
+                <div className="flex flex-wrap gap-2">
+                  {[
+                    { key:'proposal_kegiatan', icon:'fa-file-pdf',   label:'Proposal' },
+                    { key:'poster',            icon:'fa-image',      label:'Poster' },
+                    { key:'surat_izin_tempat', icon:'fa-file-alt',   label:'Surat Izin Tempat' },
+                  ].map(d => {
+                    if (!ev[d.key]) return null;
+                    return (
+                      <a key={d.key} href={`${uploadsBase}${d.key}/${ev[d.key]}`} target="_blank" rel="noreferrer"
+                        className="inline-flex items-center gap-1.5 px-3 py-2 bg-blue-500/10 text-blue-400 text-xs font-semibold rounded-xl hover:bg-blue-500/20 transition-all no-underline border border-blue-500/20">
+                        <i className={`fas ${d.icon}`}/>{d.label}
+                      </a>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Rejection reason */}
+            {ev.rejection_reason && (
+              <div className="px-4 py-3 bg-red-500/10 rounded-xl border border-red-500/20 mb-5">
+                <p className="text-red-400 text-sm font-semibold m-0"><i className="fas fa-times-circle mr-2"/>Alasan Penolakan</p>
+                <p className="text-red-300 text-sm m-0 mt-1">{ev.rejection_reason}</p>
+              </div>
+            )}
+
+            {/* Pengcab approval info */}
+            {ev.approved_by_pengcab_at && (
+              <div className="px-4 py-3 bg-blue-500/10 rounded-xl border border-blue-500/20 mb-5">
+                <p className="text-blue-400 text-sm font-semibold m-0"><i className="fas fa-check-circle mr-2"/>Disetujui oleh Pengcab</p>
+                <p className="text-blue-300/70 text-xs m-0 mt-1">{new Date(ev.approved_by_pengcab_at).toLocaleDateString('id-ID', { day:'numeric', month:'long', year:'numeric' })}</p>
+              </div>
+            )}
+
+            {/* Surat rekomendasi download (if already approved) */}
+            {ev.surat_rekomendasi_path && (
+              <div className="px-4 py-3 bg-emerald-500/10 rounded-xl border border-emerald-500/20 mb-5">
+                <div className="flex items-center justify-between gap-3 flex-wrap">
+                  <div>
+                    <p className="text-emerald-400 text-sm font-semibold m-0"><i className="fas fa-file-pdf mr-2"/>Surat Rekomendasi</p>
+                    <p className="text-emerald-300/70 text-xs m-0 mt-1">Surat rekomendasi telah digenerate</p>
+                  </div>
+                  <a href={`${API_BASE}/uploads/${ev.surat_rekomendasi_path}`} target="_blank" rel="noreferrer"
+                    className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-500 text-white text-xs font-bold rounded-xl shadow-lg shadow-emerald-500/25 hover:bg-emerald-600 transition-all no-underline">
+                    <i className="fas fa-download"/>Download PDF
+                  </a>
+                </div>
+              </div>
+            )}
+
+            {/* Action area */}
+            {canAction && (
+              <div className="border-t border-white/[0.06] pt-5 mt-2">
+                <div className="flex items-center gap-2 mb-3">
+                  <div className="w-7 h-7 rounded-lg bg-indigo-500/10 flex items-center justify-center">
+                    <i className="fas fa-gavel text-indigo-400 text-xs"/>
+                  </div>
+                  <h4 className="text-sm font-bold text-white m-0">Tindakan</h4>
+                </div>
+                <div className="mb-4">
+                  <label className="block text-[11px] font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Catatan / Alasan Penolakan</label>
+                  <textarea value={eventActionNotes} onChange={e => setEventActionNotes(e.target.value)}
+                    className={`${INPUT} min-h-[80px] resize-none`} placeholder="Tulis catatan persetujuan atau alasan penolakan..." />
+                </div>
+                <div className="flex gap-3">
+                  <BtnPrimary onClick={() => handleEventApprove(ev.id)} disabled={eventActionLoading}>
+                    {eventActionLoading
+                      ? <><i className="fas fa-spinner fa-spin"/>Memproses...</>
+                      : <><i className="fas fa-check-circle"/>Setujui & Generate Surat</>}
+                  </BtnPrimary>
+                  <BtnDanger onClick={() => handleEventReject(ev.id)} disabled={eventActionLoading}>
+                    {eventActionLoading
+                      ? <><i className="fas fa-spinner fa-spin"/>Memproses...</>
+                      : <><i className="fas fa-times-circle"/>Tolak Pengajuan</>}
+                  </BtnDanger>
+                </div>
+              </div>
+            )}
+          </div>
+        </Panel>
+      </div>
+    );
+  };
+
   /* ── Profil ── */
   const renderProfilSection = () => (
     <div className="max-w-sm">
@@ -1171,6 +1646,9 @@ export default function PbDashboard() {
       {activeSection==='profil'     && renderProfilSection()}
       {activeSection==='lisensi'     && <ManageLicense embedded />}
       {activeSection==='kejurnas'    && <KejurnasManage embedded />}
+      {activeSection==='kejurcab_review' && renderEventSection('kejurcab')}
+      {activeSection==='event_review' && renderEventSection('event_penyelenggara')}
+      {activeSection==='event_review_detail' && selectedEvent && renderEventReviewDetail()}
       {activeSection==='kta_config'  && <KtaConfigPage embedded />}
       {activeSection==='daftar_ulang' && <ManageReregistration embedded />}
       {activeSection==='landing_page'  && <ManageLandingPage embedded />}

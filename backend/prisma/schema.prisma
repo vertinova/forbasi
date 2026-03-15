@@ -526,6 +526,41 @@ model users {
   @@index([role_id], map: "fk_user_role")
 }
 
+model event_applications {
+  id                    Int                          @id @default(autoincrement())
+  user_id               Int
+  jenis_pengajuan       event_applications_jenis     @default(event_penyelenggara)
+  nama_event            String                       @db.VarChar(255)
+  jenis_event           String?                      @db.VarChar(100)
+  tanggal_mulai         DateTime                     @db.Date
+  tanggal_selesai       DateTime                     @db.Date
+  lokasi                String                       @db.VarChar(255)
+  deskripsi             String?                      @db.Text
+  penyelenggara         String?                      @db.VarChar(255)
+  kontak_person         String?                      @db.VarChar(100)
+  dokumen_surat         String?                      @db.VarChar(500)
+  proposal_kegiatan     String?                      @db.VarChar(500)
+  poster                String?                      @db.VarChar(500)
+  mata_lomba            Json?
+  persyaratan           Json?
+  status                event_applications_status    @default(submitted)
+  pengcab_approved_by   Int?
+  pengcab_approved_at   DateTime?                    @db.DateTime(0)
+  pengcab_notes         String?                      @db.Text
+  admin_approved_by     Int?
+  admin_approved_at     DateTime?                    @db.DateTime(0)
+  admin_notes           String?                      @db.Text
+  rejection_reason      String?                      @db.Text
+  surat_rekomendasi_path String?                     @db.VarChar(500)
+  created_at            DateTime?                    @default(now()) @db.Timestamp(0)
+  updated_at            DateTime?                    @default(now()) @db.Timestamp(0)
+
+  @@index([user_id], map: "idx_event_user_id")
+  @@index([status], map: "idx_event_status")
+  @@index([jenis_pengajuan], map: "idx_event_jenis")
+  @@index([created_at], map: "idx_event_created")
+}
+
 model visitor_stats {
   id              Int       @id @default(autoincrement())
   visit_date      DateTime  @unique(map: "unique_date") @db.Date
@@ -533,6 +568,20 @@ model visitor_stats {
   unique_visitors Int?      @default(0)
   created_at      DateTime? @default(now()) @db.Timestamp(0)
   updated_at      DateTime? @default(now()) @db.Timestamp(0)
+}
+
+enum event_applications_jenis {
+  event_penyelenggara
+  kejurcab
+}
+
+enum event_applications_status {
+  draft
+  submitted
+  approved_pengcab
+  rejected_pengcab
+  approved_admin
+  rejected_admin
 }
 
 enum pb_payments_recap_recipient_type {

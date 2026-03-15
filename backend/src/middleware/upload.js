@@ -134,6 +134,23 @@ const reregistrationUpload = multer({
   limits: { fileSize: parseInt(process.env.MAX_FILE_SIZE) || 2097152 }
 });
 
+// Event file upload (5MB, any fields)
+const eventStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    const subDir = file.fieldname || 'other';
+    cb(null, ensureDir(path.join(__dirname, `../../uploads/event_files/${subDir}`)));
+  },
+  filename: (req, file, cb) => {
+    cb(null, `event_${generateFilename(file)}`);
+  }
+});
+
+const eventUpload = multer({
+  storage: eventStorage,
+  fileFilter,
+  limits: { fileSize: 5242880 } // 5MB
+});
+
 // Error handling middleware for multer
 const handleUploadError = (err, req, res, next) => {
   if (err instanceof multer.MulterError) {
@@ -158,5 +175,6 @@ module.exports = {
   generalUpload,
   configUpload,
   reregistrationUpload,
+  eventUpload,
   handleUploadError
 };

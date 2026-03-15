@@ -31,6 +31,11 @@ const NotificationPanel = lazy(() => import('./pages/notifications/NotificationP
 const KtaConfigPage = lazy(() => import('./pages/config/KtaConfigPage'));
 const Reregistration = lazy(() => import('./pages/config/Reregistration'));
 const ManageReregistration = lazy(() => import('./pages/config/ManageReregistration'));
+const PenyelenggaraDashboard = lazy(() => import('./pages/dashboard/PenyelenggaraDashboard'));
+const EventSubmitForm = lazy(() => import('./pages/event/EventSubmitForm'));
+const EventDetail = lazy(() => import('./pages/event/EventDetail'));
+const EventManage = lazy(() => import('./pages/event/EventManage'));
+const KejurcabSubmitForm = lazy(() => import('./pages/event/KejurcabSubmitForm'));
 
 const PageLoader = () => (
   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', background: '#0c1222' }}>
@@ -68,6 +73,8 @@ export default function App() {
           <Route path="/pengcab/kta/:id" element={<ProtectedRoute allowedRoles={[2]}><KtaDetail /></ProtectedRoute>} />
           <Route path="/pengcab/kta-config" element={<ProtectedRoute allowedRoles={[2]}><KtaConfigPage /></ProtectedRoute>} />
           <Route path="/pengcab/reregistrations" element={<ProtectedRoute allowedRoles={[2]}><ManageReregistration /></ProtectedRoute>} />
+          <Route path="/pengcab/kejurcab/submit" element={<ProtectedRoute allowedRoles={[2]}><KejurcabSubmitForm /></ProtectedRoute>} />
+          <Route path="/pengcab/events" element={<ProtectedRoute allowedRoles={[2]}><EventManage /></ProtectedRoute>} />
 
           {/* Pengda (role_id: 3) */}
           <Route path="/pengda" element={<ProtectedRoute allowedRoles={[3]}><PengdaDashboard /></ProtectedRoute>} />
@@ -75,6 +82,7 @@ export default function App() {
           <Route path="/pengda/kejurnas" element={<ProtectedRoute allowedRoles={[3]}><KejurnasManage /></ProtectedRoute>} />
           <Route path="/pengda/kta-config" element={<ProtectedRoute allowedRoles={[3]}><KtaConfigPage /></ProtectedRoute>} />
           <Route path="/pengda/reregistrations" element={<ProtectedRoute allowedRoles={[3]}><ManageReregistration /></ProtectedRoute>} />
+          <Route path="/pengda/events" element={<ProtectedRoute allowedRoles={[3]}><EventManage /></ProtectedRoute>} />
 
           {/* PB (role_id: 4) */}
           <Route path="/pb" element={<ProtectedRoute allowedRoles={[4]}><PbDashboard /></ProtectedRoute>} />
@@ -85,6 +93,12 @@ export default function App() {
           <Route path="/pb/kejurnas" element={<ProtectedRoute allowedRoles={[4]}><KejurnasManage /></ProtectedRoute>} />
           <Route path="/pb/kta-config" element={<ProtectedRoute allowedRoles={[4]}><KtaConfigPage /></ProtectedRoute>} />
           <Route path="/pb/reregistrations" element={<ProtectedRoute allowedRoles={[4]}><ManageReregistration /></ProtectedRoute>} />
+          <Route path="/pb/events" element={<ProtectedRoute allowedRoles={[4]}><EventManage /></ProtectedRoute>} />
+
+          {/* Penyelenggara (role_id: 5) */}
+          <Route path="/penyelenggara" element={<ProtectedRoute allowedRoles={[5]}><PenyelenggaraDashboard /></ProtectedRoute>} />
+          <Route path="/penyelenggara/event/submit" element={<ProtectedRoute allowedRoles={[5]}><EventSubmitForm /></ProtectedRoute>} />
+          <Route path="/penyelenggara/event/:id" element={<ProtectedRoute allowedRoles={[5]}><EventDetail /></ProtectedRoute>} />
 
           {/* SuperAdmin */}
           <Route path="/superadmin" element={<ProtectedRoute allowedTypes={['super_admin']}><SuperAdminDashboard /></ProtectedRoute>} />

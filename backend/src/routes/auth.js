@@ -10,5 +10,6 @@ router.post('/reset-password', authController.resetPassword);
 router.post('/change-password', authenticate, authController.changePassword);
 router.post('/register', authController.registerUser);
 router.post('/register-license', authController.registerLicenseUser);
+router.post('/register-penyelenggara', authController.registerPenyelenggara);
 
 module.exports = router;

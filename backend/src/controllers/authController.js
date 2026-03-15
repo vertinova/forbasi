@@ -17,7 +17,7 @@ const generateRefreshToken = (payload) => {
 };
 
 const getRoleName = (roleId) => {
-  const roles = { 1: 'anggota', 2: 'pengcab', 3: 'pengda', 4: 'pb' };
+  const roles = { 1: 'anggota', 2: 'pengcab', 3: 'pengda', 4: 'pb', 5: 'penyelenggara' };
   return roles[roleId] || 'unknown';
 };
 
@@ -437,6 +437,42 @@ exports.registerLicenseUser = async (req, res) => {
     }
     
     return res.status(500).json({ success: false, message: 'Terjadi kesalahan server. Silakan coba lagi.' });
+  }
+};
+
+exports.registerPenyelenggara = async (req, res) => {
+  try {
+    const { nama_organisasi, username, email, phone, address, password, confirm_password, province_id, city_id } = req.body;
+
+    if (!nama_organisasi || !username || !email || !password || !confirm_password || !province_id || !city_id) {
+      return res.status(400).json({ success: false, message: 'Semua field wajib diisi' });
+    }
+    if (password !== confirm_password) {
+      return res.status(400).json({ success: false, message: 'Password dan konfirmasi tidak cocok' });
+    }
+    if (password.length < 6) {
+      return res.status(400).json({ success: false, message: 'Password minimal 6 karakter' });
+    }
+
+    const existingUser = await User.findByUsername(username);
+    if (existingUser) {
+      return res.status(400).json({ success: false, message: 'Username sudah terdaftar' });
+    }
+    const existingEmail = await User.findByEmail(email);
+    if (existingEmail) {
+      return res.status(400).json({ success: false, message: 'Email sudah terdaftar' });
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 12);
+    const userId = await User.create({
+      club_name: nama_organisasi, username, email, phone: phone || null, address: address || null,
+      password: hashedPassword, role_id: 5, province_id: parseInt(province_id), city_id: parseInt(city_id)
+    });
+
+    return res.status(201).json({ success: true, message: 'Pendaftaran penyelenggara berhasil! Silakan login.', data: { id: userId } });
+  } catch (err) {
+    console.error('Register penyelenggara error:', err);
+    return res.status(500).json({ success: false, message: 'Terjadi kesalahan server' });
   }
 };
 

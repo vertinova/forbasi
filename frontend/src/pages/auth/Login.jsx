@@ -10,6 +10,7 @@ const roleRedirects = {
   pengcab:     '/pengcab',
   pengda:      '/pengda',
   pb:          '/pb',
+  penyelenggara: '/penyelenggara',
   pelatih:     '/license-user',
   juri:        '/license-user'
 };
