@@ -49,9 +49,11 @@ const DEPLOY_BACKEND = [
   `cd ${STAGING_DIR}`,
   `(test -d .git && git fetch origin main && git reset --hard origin/main) || (rm -rf ${STAGING_DIR}/* && git clone --depth 1 --branch main ${REPO_URL} .)`,
   `rsync -a --delete --exclude node_modules --exclude .env --exclude uploads backend/ ${BACKEND_DIR}/`,
+  `cp ${STAGING_DIR}/deploy/webhook-server.js /var/www/webhook-server.js`,
   `cd ${BACKEND_DIR}`,
   'npm install --production',
   'npx prisma generate',
+  'node scripts/setup_event_tables.js',
   'pm2 restart forbasi-pb-backend',
 ].join(' && ');
 
