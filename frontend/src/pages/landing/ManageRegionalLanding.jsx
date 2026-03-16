@@ -3,8 +3,15 @@ import api from '../../services/api';
 import toast from 'react-hot-toast';
 import ConfirmModal from '../../components/common/ConfirmModal';
 
-const API_BASE = (import.meta.env.VITE_API_URL || 'http://localhost:5000/api').replace(/\/api$/, '');
-const fileUrl = (p) => p ? `${API_BASE}/uploads/regional/${p}` : null;
+// Jabar's server URL for images
+const JABAR_BASE = 'https://jabar.forbasi.or.id';
+const fileUrl = (p) => {
+  if (!p) return null;
+  // If already absolute URL, return as-is
+  if (p.startsWith('http://') || p.startsWith('https://')) return p;
+  // Otherwise, prepend Jabar's base URL
+  return `${JABAR_BASE}/uploads/${p.replace(/^\/+/, '')}`;
+};
 
 const TABS = [
   { key: 'hero',     label: 'Hero Slides',  icon: 'fa-image' },

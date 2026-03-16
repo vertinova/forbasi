@@ -3,8 +3,15 @@ import api from '../../services/api';
 import toast from 'react-hot-toast';
 import ConfirmModal from '../../components/common/ConfirmModal';
 
-const API_BASE = (import.meta.env.VITE_API_URL || 'http://localhost:5000/api').replace(/\/api$/, '');
-const fileUrl = (p) => p ? `${API_BASE}/uploads/regional/${p}` : null;
+// Jabar's server URL for files
+const JABAR_BASE = 'https://jabar.forbasi.or.id';
+const fileUrl = (p) => {
+  if (!p) return null;
+  // If already absolute URL, return as-is
+  if (p.startsWith('http://') || p.startsWith('https://')) return p;
+  // Otherwise, prepend Jabar's base URL
+  return `${JABAR_BASE}/uploads/${p.replace(/^\/+/, '')}`;
+};
 
 const INPUT = 'w-full px-3.5 py-2.5 text-sm bg-white/[0.05] border border-white/[0.08] text-gray-200 placeholder-gray-500 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500/50 transition-all';
 const LABEL = 'block text-xs font-semibold text-gray-400 mb-1.5';
@@ -18,10 +25,14 @@ const JENIS_OPTIONS = [
   { value: 'lainnya', label: 'Lainnya' },
 ];
 
+// Status badge mapping (handles both lowercase and Jabar API's UPPERCASE)
 const STATUS_BADGE = {
-  pending:  { bg: 'bg-amber-500/10', text: 'text-amber-400', label: 'Pending' },
-  approved: { bg: 'bg-emerald-500/10', text: 'text-emerald-400', label: 'Disetujui' },
-  rejected: { bg: 'bg-red-500/10', text: 'text-red-400', label: 'Ditolak' },
+  pending:    { bg: 'bg-amber-500/10', text: 'text-amber-400', label: 'Pending' },
+  PENDING:    { bg: 'bg-amber-500/10', text: 'text-amber-400', label: 'Pending' },
+  approved:   { bg: 'bg-emerald-500/10', text: 'text-emerald-400', label: 'Disetujui' },
+  DISETUJUI:  { bg: 'bg-emerald-500/10', text: 'text-emerald-400', label: 'Disetujui' },
+  rejected:   { bg: 'bg-red-500/10', text: 'text-red-400', label: 'Ditolak' },
+  DITOLAK:    { bg: 'bg-red-500/10', text: 'text-red-400', label: 'Ditolak' },
 };
 
 export default function ManageRekomendasi({ embedded }) {
