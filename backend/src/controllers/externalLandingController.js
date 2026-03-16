@@ -336,17 +336,67 @@ exports.getPublicLanding = async (req, res) => {
     const { region } = req.params;
     if (!region) return res.status(400).json({ success: false, message: 'Region diperlukan' });
 
-    const [heroSlides] = await db.query('SELECT * FROM regional_hero_slides WHERE region = ? AND aktif = 1 ORDER BY urutan ASC', [region]);
-    const [berita] = await db.query('SELECT * FROM regional_berita WHERE region = ? AND aktif = 1 ORDER BY tanggal DESC LIMIT 10', [region]);
-    const [struktur] = await db.query('SELECT * FROM regional_struktur WHERE region = ? AND aktif = 1 ORDER BY urutan ASC', [region]);
-    const [feedback] = await db.query('SELECT * FROM regional_feedback WHERE region = ? AND aktif = 1 ORDER BY id DESC', [region]);
-    const [configRows] = await db.query('SELECT config_key, config_value FROM regional_site_config WHERE region = ?', [region]);
+    // Resolve province_id from region code
+    const { REGIONS } = require('../config/regions');
+    const regionData = REGIONS[region];
+    if (!regionData) return res.status(404).json({ success: false, message: 'Region tidak ditemukan' });
+    const provinceId = regionData.province_id;
+
+    // Core landing data (parallel)
+    const [
+      [heroSlides], [berita], [struktur], [feedback], [configRows],
+      [pengcab], [rekomendasi],
+    ] = await Promise.all([
+      db.query('SELECT * FROM regional_hero_slides WHERE region = ? AND aktif = 1 ORDER BY urutan ASC', [region]),
+      db.query('SELECT * FROM regional_berita WHERE region = ? AND aktif = 1 ORDER BY tanggal DESC LIMIT 10', [region]),
+      db.query('SELECT * FROM regional_struktur WHERE region = ? AND aktif = 1 ORDER BY urutan ASC', [region]),
+      db.query('SELECT * FROM regional_feedback WHERE region = ? AND aktif = 1 ORDER BY id DESC', [region]),
+      db.query('SELECT config_key, config_value FROM regional_site_config WHERE region = ?', [region]),
+      db.query('SELECT id, nama_pengcab, ketua, alamat, telepon, email, foto, city_id FROM pengcab_data WHERE region = ? AND aktif = 1 ORDER BY nama_pengcab ASC', [region]),
+      db.query('SELECT id, pemohon_nama, pemohon_club, jenis_rekomendasi, perihal, approved_at FROM rekomendasi WHERE region = ? AND status = ? ORDER BY approved_at DESC LIMIT 20', [region, 'approved']),
+    ]);
+
     const config = {};
     configRows.forEach(r => { config[r.config_key] = r.config_value; });
 
+    // Kejurda: find pengda user for this province to get pengda_id
+    let kejurdaOpen = [];
+    try {
+      const [pengdaUsers] = await db.query('SELECT id FROM users WHERE role_id = 3 AND province_id = ? LIMIT 1', [provinceId]);
+      if (pengdaUsers.length) {
+        const pengdaId = pengdaUsers[0].id;
+        const [events] = await db.query(
+          "SELECT id, event_name, event_date, location, description, status FROM kejurda_events WHERE pengda_id = ? AND status IN ('upcoming','ongoing') ORDER BY event_date ASC",
+          [pengdaId]
+        );
+        kejurdaOpen = events;
+      }
+    } catch { /* kejurda tables may not exist */ }
+
+    // Stats
+    const [[pengcabCount]] = await db.query('SELECT COUNT(*) as c FROM pengcab_data WHERE region = ? AND aktif = 1', [region]);
+    const [[rekomCount]] = await db.query('SELECT COUNT(*) as c FROM rekomendasi WHERE region = ? AND status = ?', [region, 'approved']);
+    const [[userCount]] = await db.query('SELECT COUNT(*) as c FROM users WHERE province_id = ?', [provinceId]);
+
     res.json({
       success: true,
-      data: { heroSlides, berita, struktur, feedback, config }
+      data: {
+        region,
+        heroSlides,
+        berita,
+        struktur,
+        feedback,
+        config,
+        pengcab,
+        rekomendasi,
+        kejurdaOpen,
+        stats: {
+          pengcab: pengcabCount?.c || 0,
+          rekomendasi: rekomCount?.c || 0,
+          kejurda: kejurdaOpen.length,
+          users: userCount?.c || 0,
+        },
+      },
     });
   } catch (err) {
     console.error('getPublicLanding error:', err);
