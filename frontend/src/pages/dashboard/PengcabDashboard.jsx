@@ -11,6 +11,7 @@ import ConfirmModal from '../../components/common/ConfirmModal';
 import KtaConfigPage from '../config/KtaConfigPage';
 import ManageReregistration from '../config/ManageReregistration';
 import KejurcabSubmitForm from '../event/KejurcabSubmitForm';
+import KejurdaManage from '../kejurda/KejurdaManage';
 
 const API_BASE = (import.meta.env.VITE_API_URL || 'http://localhost:5000/api').replace(/\/api$/, '');
 
@@ -247,6 +248,7 @@ export default function PengcabDashboard() {
     { icon: <i className="fas fa-trophy" />, label: 'Kejurcab Saya', onClick: () => setActiveTab('kejurcab'), active: activeTab === 'kejurcab' },
     { icon: <i className="fas fa-plus-circle" />, label: 'Ajukan Kejurcab', onClick: () => setActiveTab('submit_kejurcab'), active: activeTab === 'submit_kejurcab' },
     { icon: <i className="fas fa-clipboard-check" />, label: 'Review Event', onClick: () => setActiveTab('review_event'), active: activeTab === 'review_event', badge: pendingEvents.length },
+    { icon: <i className="fas fa-medal" />, label: 'Kejurda', onClick: () => setActiveTab('kejurda'), active: activeTab === 'kejurda' },
     { divider: true, dividerLabel: 'Pengaturan' },
     { icon: <i className="fas fa-cogs" />, label: 'Konfigurasi KTA', onClick: () => setActiveTab('kta_config'), active: activeTab === 'kta_config' },
     { icon: <i className="fas fa-redo" />, label: 'Daftar Ulang', onClick: () => setActiveTab('daftar_ulang'), active: activeTab === 'daftar_ulang' },
@@ -730,6 +732,7 @@ export default function PengcabDashboard() {
       )}
       {activeTab === 'review_event' && renderReviewEventSection()}
       {activeTab === 'review_event_detail' && selectedEvent && renderEventReviewDetail()}
+      {activeTab === 'kejurda' && <KejurdaManage embedded />}
 
       <ConfirmModal show={confirm.show} title={confirm.title} message={confirm.message}
         onConfirm={handleUpdateStatus}

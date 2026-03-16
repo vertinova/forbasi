@@ -8,6 +8,7 @@ import api from '../../services/api';
 import toast from 'react-hot-toast';
 import ConfirmModal from '../../components/common/ConfirmModal';
 import KejurnasManage from '../kejurnas/KejurnasManage';
+import KejurdaManage from '../kejurda/KejurdaManage';
 import KtaConfigPage from '../config/KtaConfigPage';
 import ManageReregistration from '../config/ManageReregistration';
 
@@ -143,6 +144,7 @@ export default function PengdaDashboard() {
     { icon: <i className="fas fa-wallet" />, label: 'Saldo dari PB', onClick: () => setActiveTab('balance'), active: activeTab === 'balance' },
     { divider: true, dividerLabel: 'Pengaturan' },
     { icon: <i className="fas fa-trophy" />, label: 'Kejurnas', onClick: () => setActiveTab('kejurnas'), active: activeTab === 'kejurnas' },
+    { icon: <i className="fas fa-medal" />, label: 'Kejurda', onClick: () => setActiveTab('kejurda'), active: activeTab === 'kejurda' },
     { icon: <i className="fas fa-cogs" />, label: 'Konfigurasi KTA', onClick: () => setActiveTab('kta_config'), active: activeTab === 'kta_config' },
     { icon: <i className="fas fa-redo" />, label: 'Daftar Ulang', onClick: () => setActiveTab('daftar_ulang'), active: activeTab === 'daftar_ulang' },
   ];
@@ -546,6 +548,7 @@ export default function PengdaDashboard() {
       {activeTab === 'members' && renderMembersSection()}
       {activeTab === 'balance' && renderBalanceSection()}
       {activeTab === 'kejurnas' && <KejurnasManage embedded />}
+      {activeTab === 'kejurda' && <KejurdaManage embedded />}
       {activeTab === 'kta_config' && <KtaConfigPage embedded />}
       {activeTab === 'daftar_ulang' && <ManageReregistration embedded />}
 

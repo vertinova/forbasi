@@ -36,6 +36,7 @@ const EventSubmitForm = lazy(() => import('./pages/event/EventSubmitForm'));
 const EventDetail = lazy(() => import('./pages/event/EventDetail'));
 const EventManage = lazy(() => import('./pages/event/EventManage'));
 const KejurcabSubmitForm = lazy(() => import('./pages/event/KejurcabSubmitForm'));
+const KejurdaManage = lazy(() => import('./pages/kejurda/KejurdaManage'));
 
 const PageLoader = () => (
   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', background: '#0c1222' }}>
@@ -75,11 +76,13 @@ export default function App() {
           <Route path="/pengcab/reregistrations" element={<ProtectedRoute allowedRoles={[2]}><ManageReregistration /></ProtectedRoute>} />
           <Route path="/pengcab/kejurcab/submit" element={<ProtectedRoute allowedRoles={[2]}><KejurcabSubmitForm /></ProtectedRoute>} />
           <Route path="/pengcab/events" element={<ProtectedRoute allowedRoles={[2]}><EventManage /></ProtectedRoute>} />
+          <Route path="/pengcab/kejurda" element={<ProtectedRoute allowedRoles={[2]}><KejurdaManage /></ProtectedRoute>} />
 
           {/* Pengda (role_id: 3) */}
           <Route path="/pengda" element={<ProtectedRoute allowedRoles={[3]}><PengdaDashboard /></ProtectedRoute>} />
           <Route path="/pengda/kta/:id" element={<ProtectedRoute allowedRoles={[3]}><KtaDetail /></ProtectedRoute>} />
           <Route path="/pengda/kejurnas" element={<ProtectedRoute allowedRoles={[3]}><KejurnasManage /></ProtectedRoute>} />
+          <Route path="/pengda/kejurda" element={<ProtectedRoute allowedRoles={[3]}><KejurdaManage /></ProtectedRoute>} />
           <Route path="/pengda/kta-config" element={<ProtectedRoute allowedRoles={[3]}><KtaConfigPage /></ProtectedRoute>} />
           <Route path="/pengda/reregistrations" element={<ProtectedRoute allowedRoles={[3]}><ManageReregistration /></ProtectedRoute>} />
           <Route path="/pengda/events" element={<ProtectedRoute allowedRoles={[3]}><EventManage /></ProtectedRoute>} />
