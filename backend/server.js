@@ -23,6 +23,7 @@ const configRoutes = require('./src/routes/config');
 const regionalRoutes = require('./src/routes/regional');
 const pbPaymentRoutes = require('./src/routes/pbPayment');
 const landingRoutes = require('./src/routes/landing');
+const regionalLandingRoutes = require('./src/routes/regionalLanding');
 const eventRoutes = require('./src/routes/event');
 const externalRoutes = require('./src/routes/external');
 
@@ -163,6 +164,7 @@ app.use('/api/config', configRoutes);
 app.use('/api/regional', regionalRoutes);
 app.use('/api/pb-payment', pbPaymentRoutes);
 app.use('/api/landing', landingRoutes);
+app.use('/api/regional-landing', regionalLandingRoutes);
 app.use('/api/events', eventRoutes);
 app.use('/api/external', externalRoutes);
 

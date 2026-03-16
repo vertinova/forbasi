@@ -11,6 +11,7 @@ import KejurnasManage from '../kejurnas/KejurnasManage';
 import KejurdaManage from '../kejurda/KejurdaManage';
 import KtaConfigPage from '../config/KtaConfigPage';
 import ManageReregistration from '../config/ManageReregistration';
+import ManageRegionalLanding from '../landing/ManageRegionalLanding';
 
 const API_BASE = (import.meta.env.VITE_API_URL || 'http://localhost:5000/api').replace(/\/api$/, '');
 
@@ -147,6 +148,7 @@ export default function PengdaDashboard() {
     { icon: <i className="fas fa-medal" />, label: 'Kejurda', onClick: () => setActiveTab('kejurda'), active: activeTab === 'kejurda' },
     { icon: <i className="fas fa-cogs" />, label: 'Konfigurasi KTA', onClick: () => setActiveTab('kta_config'), active: activeTab === 'kta_config' },
     { icon: <i className="fas fa-redo" />, label: 'Daftar Ulang', onClick: () => setActiveTab('daftar_ulang'), active: activeTab === 'daftar_ulang' },
+    { icon: <i className="fas fa-globe" />, label: 'Landing Page', onClick: () => setActiveTab('landing'), active: activeTab === 'landing' },
   ];
 
   const renderKtaSection = () => (
@@ -551,6 +553,7 @@ export default function PengdaDashboard() {
       {activeTab === 'kejurda' && <KejurdaManage embedded />}
       {activeTab === 'kta_config' && <KtaConfigPage embedded />}
       {activeTab === 'daftar_ulang' && <ManageReregistration embedded />}
+      {activeTab === 'landing' && <ManageRegionalLanding embedded />}
 
       <ConfirmModal show={confirm.show} title={confirm.title} message={confirm.message}
         onConfirm={handleUpdateStatus}
