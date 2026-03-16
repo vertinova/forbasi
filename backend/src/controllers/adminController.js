@@ -2,7 +2,6 @@ const prisma = require('../lib/prisma');
 const db = require('../lib/db-compat');
 const KtaApplication = require('../models/KtaApplication');
 const User = require('../models/User');
-const { ActivityLog } = require('../models/Common');
 
 function normBigInt(row) {
   if (!row) return row;
@@ -175,18 +174,6 @@ exports.exportMembers = async (req, res) => {
   } catch (err) {
     console.error('Export members error:', err);
     return res.status(500).json({ success: false, message: 'Gagal export data' });
-  }
-};
-
-// Get recent activity logs
-exports.getRecentActivity = async (req, res) => {
-  try {
-    const { limit = 50 } = req.query;
-    const logs = await ActivityLog.findAll({ limit: parseInt(limit) });
-    return res.json({ success: true, data: logs });
-  } catch (err) {
-    console.error('Get recent activity error:', err);
-    return res.status(500).json({ success: false, message: 'Terjadi kesalahan server' });
   }
 };
 

@@ -22,36 +22,6 @@ const SuperAdmin = {
   },
 };
 
-const ActivityLog = {
-  async create(data) {
-    const { user_id, role_name, activity_type, description, application_id, old_status, new_status } = data;
-    await prisma.activity_logs.create({
-      data: {
-        user_id,
-        role_name,
-        activity_type,
-        description: description || null,
-        application_id: application_id || null,
-        old_status: old_status || null,
-        new_status: new_status || null,
-      },
-    });
-  },
-
-  async findAll(filters = {}) {
-    const where = {};
-    if (filters.user_id) where.user_id = filters.user_id;
-    if (filters.application_id) where.application_id = filters.application_id;
-    if (filters.role_name) where.role_name = filters.role_name;
-
-    return prisma.activity_logs.findMany({
-      where,
-      orderBy: { created_at: 'desc' },
-      ...(filters.limit && { take: parseInt(filters.limit) }),
-    });
-  },
-};
-
 const Province = {
   async findAll() {
     return prisma.provinces.findMany({ orderBy: { name: 'asc' } });
@@ -155,7 +125,6 @@ const LicenseEvent = {
 
 module.exports = {
   SuperAdmin,
-  ActivityLog,
   Province,
   City,
   PushSubscription,

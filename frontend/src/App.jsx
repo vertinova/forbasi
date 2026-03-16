@@ -10,8 +10,6 @@ import Homepage from './pages/public/Homepage';
 
 // Everything else lazy-loaded
 const Login = lazy(() => import('./pages/auth/Login'));
-const ForgotPassword = lazy(() => import('./pages/auth/ForgotPassword'));
-const ResetPassword = lazy(() => import('./pages/auth/ResetPassword'));
 const RegisterLicense = lazy(() => import('./pages/auth/RegisterLicense'));
 const Register = lazy(() => import('./pages/auth/Register'));
 const VerifyKta = lazy(() => import('./pages/public/VerifyKta'));
@@ -57,8 +55,6 @@ export default function App() {
           <Route path="/" element={<Homepage />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
-          <Route path="/forgot-password" element={<ForgotPassword />} />
-          <Route path="/reset-password" element={<ResetPassword />} />
           <Route path="/register-license" element={<RegisterLicense />} />
           <Route path="/verify/:barcodeId" element={<VerifyKta />} />
           <Route path="/kejurnas/teams" element={<ApprovedTeams />} />

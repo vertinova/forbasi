@@ -1,5 +1,4 @@
 const PbPayment = require('../models/PbPayment');
-const { ActivityLog } = require('../models/Common');
 const path = require('path');
 const fs = require('fs');
 
@@ -113,16 +112,6 @@ exports.processRecapPayment = async (req, res) => {
       bankDetails.province_id, bankDetails.city_id,
       month, year
     );
-
-    await ActivityLog.create({
-      user_id: req.user.id,
-      role_name: 'Pengurus Besar',
-      activity_type: 'recap_payment',
-      description: `Rekap pembayaran Rp ${parsedAmount.toLocaleString('id-ID')} ke ${recipient_type} (ID: ${recipient_user_id}) periode ${month || '-'}/${year}. ${updatedCount} KTA ditandai.`,
-      application_id: null,
-      old_status: null,
-      new_status: null
-    });
 
     return res.json({
       success: true,

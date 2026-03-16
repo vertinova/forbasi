@@ -134,21 +134,6 @@ async function setupDatabase() {
       ) ENGINE=InnoDB
     `);
 
-    // Activity Logs
-    await connection.query(`
-      CREATE TABLE IF NOT EXISTS activity_logs (
-        id INT PRIMARY KEY AUTO_INCREMENT,
-        user_id INT DEFAULT NULL,
-        role_name VARCHAR(50) DEFAULT NULL,
-        activity_type VARCHAR(100) DEFAULT NULL,
-        description TEXT DEFAULT NULL,
-        application_id INT DEFAULT NULL,
-        old_status VARCHAR(50) DEFAULT NULL,
-        new_status VARCHAR(50) DEFAULT NULL,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-      ) ENGINE=InnoDB
-    `);
-
     // KTA Configs (signature, stamp, signer info per level)
     await connection.query(`
       CREATE TABLE IF NOT EXISTS kta_configs (

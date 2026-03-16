@@ -10,6 +10,5 @@ router.get('/approved-generated-kta', authenticate, authorize(2, 3, 4), adminCon
 router.get('/export-members', authenticate, authorize(2, 3, 4), adminController.exportMembers);
 router.get('/export-saldo', authenticate, authorize(4), adminController.exportSaldo);
 router.get('/export-rekening', authenticate, authorize(4), adminController.exportRekening);
-router.get('/activity', authenticate, authorize(2, 3, 4), adminController.getRecentActivity);
 
 module.exports = router;

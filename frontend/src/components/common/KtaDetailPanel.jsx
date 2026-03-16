@@ -262,37 +262,6 @@ export default function KtaDetailPanel({ appId, onBack, onStatusUpdated }) {
               )}
             </div>
           </div>
-
-          {/* Activity Logs */}
-          {app.activity_logs?.length > 0 && (
-            <div className="bg-[#141620] rounded-2xl border border-white/[0.06] overflow-hidden">
-              <div className="px-5 py-3.5 border-b border-white/[0.04] flex items-center gap-2.5">
-                <div className="w-6 h-6 rounded-lg bg-violet-500/10 flex items-center justify-center">
-                  <i className="fas fa-history text-violet-400 text-[10px]" />
-                </div>
-                <span className="text-xs font-bold text-white">Riwayat Aktivitas</span>
-              </div>
-              <div className="p-4 space-y-3">
-                {app.activity_logs.map((log, i) => (
-                  <div key={i} className="flex gap-3 relative">
-                    {i < app.activity_logs.length - 1 && <div className="absolute left-[11px] top-[26px] bottom-0 w-[2px] bg-white/[0.04] rounded-full" />}
-                    <div className="w-[24px] h-[24px] rounded-full bg-white/[0.06] flex items-center justify-center flex-shrink-0 relative z-10">
-                      <i className="fas fa-circle text-gray-600 text-[5px]" />
-                    </div>
-                    <div className="flex-1 pb-1">
-                      <div className="text-[12px] font-semibold text-gray-300">{log.action}</div>
-                      <div className="text-[11px] text-gray-500 mt-0.5">
-                        {log.performed_by && <span className="text-gray-400">{log.performed_by}</span>}
-                        {log.performed_by && ' · '}
-                        {new Date(log.created_at).toLocaleString('id-ID')}
-                      </div>
-                      {log.notes && <div className="text-[11px] text-gray-500 mt-1 bg-white/[0.03] rounded-lg px-2.5 py-1.5 inline-block">{log.notes}</div>}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
         </div>
 
         {/* ── RIGHT COLUMN (1/3 width on large) ── */}

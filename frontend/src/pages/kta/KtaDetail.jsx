@@ -191,28 +191,6 @@ export default function KtaDetail() {
           </div>
         </div>
 
-        {/* Activity Logs */}
-        {app.activity_logs?.length > 0 && (
-          <div className="card" style={{ marginTop: '1.5rem' }}>
-            <div className="card-header"><h3 style={{ fontSize: '1rem' }}>Riwayat Aktivitas</h3></div>
-            <div className="table-responsive">
-              <table>
-                <thead><tr><th>Waktu</th><th>Aksi</th><th>Oleh</th><th>Catatan</th></tr></thead>
-                <tbody>
-                  {app.activity_logs.map((log, i) => (
-                    <tr key={i}>
-                      <td>{new Date(log.created_at).toLocaleString('id-ID')}</td>
-                      <td>{log.action}</td>
-                      <td>{log.performed_by || '-'}</td>
-                      <td>{log.notes || '-'}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        )}
-
         {/* Confirm/Reject Modal */}
         {modal.open && modal.action === 'reject' ? (
           <div className="modal-overlay" onClick={() => setModal({ open: false, action: '', status: '' })}>

@@ -91,6 +91,14 @@ const EventApplication = {
     )`];
     const args = [];
 
+    if (filters.province_id) {
+      conditions.push('u.province_id = ?');
+      args.push(parseInt(filters.province_id));
+    }
+    if (filters.jenis_pengajuan) {
+      conditions.push('ea.jenis_pengajuan = ?');
+      args.push(filters.jenis_pengajuan);
+    }
     if (filters.search) {
       conditions.push('(ea.nama_event LIKE ? OR u.club_name LIKE ?)');
       args.push(`%${filters.search}%`, `%${filters.search}%`);
@@ -115,6 +123,10 @@ const EventApplication = {
     let conditions = ['1=1'];
     const args = [];
 
+    if (filters.province_id) {
+      conditions.push('u.province_id = ?');
+      args.push(parseInt(filters.province_id));
+    }
     if (filters.jenis_pengajuan) {
       conditions.push('ea.jenis_pengajuan = ?');
       args.push(filters.jenis_pengajuan);

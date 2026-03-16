@@ -51,7 +51,6 @@ const SECTIONS = [
   { key: 'kta_terbit', label: 'KTA Terbit',     icon: 'fa-id-card'        },
 
   { key: 'pengguna',   label: 'Pengguna',       icon: 'fa-users'          },
-  { key: 'log',        label: 'Log Aktivitas',  icon: 'fa-history'        },
   { key: 'profil',     label: 'Profil',         icon: 'fa-user-cog'       },
   { divider: true, dividerLabel: 'Fitur' },
   { key: 'lisensi',       label: 'Kelola Lisensi',   icon: 'fa-id-badge' },
@@ -232,10 +231,6 @@ export default function PbDashboard() {
   const [deleteConfirm, setDeleteConfirm]   = useState({ show:false, id:null, name:'' });
   const [resetConfirm, setResetConfirm]     = useState({ show:false, id:null, name:'' });
 
-  /* Log */
-  const [activityLog, setActivityLog] = useState([]);
-  const [logLoading, setLogLoading]   = useState(false);
-
   /* Profil */
   const [pwForm, setPwForm]       = useState({ current:'', newPw:'', confirm:'' });
   const [pwLoading, setPwLoading] = useState(false);
@@ -320,15 +315,6 @@ export default function PbDashboard() {
     finally { setUsersLoading(false); }
   }, [userSearch, userRoleFilter]);
 
-  const fetchActivityLog = useCallback(async () => {
-    setLogLoading(true);
-    try {
-      const r = await api.get('/admin/activity', { params: { limit: 50 } });
-      setActivityLog(r.data.data || []);
-    } catch { toast.error('Gagal memuat log aktivitas'); }
-    finally { setLogLoading(false); }
-  }, []);
-
   const fetchPendingEvents = useCallback(async () => {
     setPendingEventsLoading(true);
     try {
@@ -396,7 +382,6 @@ export default function PbDashboard() {
     if (activeSection === 'kta_terbit') fetchIssuedKtas(1);
 
     if (activeSection === 'pengguna')   fetchUsers(1);
-    if (activeSection === 'log')        fetchActivityLog();
     if (activeSection === 'kejurcab_review') { setEventTab('pending'); setEventSearch(''); setEventFilterStatus(''); fetchPendingEvents(); fetchAllEvents('kejurcab'); }
     if (activeSection === 'event_review') { setEventTab('pending'); setEventSearch(''); setEventFilterStatus(''); fetchPendingEvents(); fetchAllEvents('event_penyelenggara'); }
   }, [activeSection]); // eslint-disable-line
@@ -1176,34 +1161,6 @@ export default function PbDashboard() {
     </Panel>
   );
 
-  /* ── Log ── */
-  const renderLogSection = () => (
-    <Panel>
-      <PanelHeader icon="fa-history" grad="from-violet-500 to-violet-600" title="Log Aktivitas PB"/>
-      {logLoading ? <div className="py-16 flex justify-center"><LoadingSpinner/></div>
-        : activityLog.length===0 ? <EmptyState icon="fa-history" text="Belum ada log aktivitas"/>
-        : (
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="border-b border-white/[0.06]">
-                <tr>{['#','Waktu','Tipe','Deskripsi'].map(c=><Th key={c}>{c}</Th>)}</tr>
-              </thead>
-              <tbody>
-                {activityLog.map((log,i)=>(
-                  <tr key={log.id||i} className="border-b border-white/[0.04] hover:bg-white/[0.03] transition-colors">
-                    <Td><span className="text-gray-500 text-xs font-mono">{i+1}</span></Td>
-                    <Td><span className="text-gray-500 text-xs whitespace-nowrap">{log.created_at?new Date(log.created_at).toLocaleString('id-ID',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}):'—'}</span></Td>
-                    <Td><span className="inline-flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-semibold rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 shadow-sm">{log.activity_type||log.action||'—'}</span></Td>
-                    <Td><span className="text-gray-400">{log.description||'—'}</span></Td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-    </Panel>
-  );
-
   /* ══════════════════════════════════════
      EVENT REVIEW — Perizinan & Rekomendasi
   ══════════════════════════════════════ */
@@ -1642,7 +1599,6 @@ export default function PbDashboard() {
       {activeSection==='kta_terbit'  && renderKtaTerbitSection()}
 
       {activeSection==='pengguna'   && renderPenggunaSection()}
-      {activeSection==='log'        && renderLogSection()}
       {activeSection==='profil'     && renderProfilSection()}
       {activeSection==='lisensi'     && <ManageLicense embedded />}
       {activeSection==='kejurnas'    && <KejurnasManage embedded />}

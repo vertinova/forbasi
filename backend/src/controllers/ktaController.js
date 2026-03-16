@@ -1,6 +1,5 @@
 const KtaApplication = require('../models/KtaApplication');
 const User = require('../models/User');
-const { ActivityLog } = require('../models/Common');
 const KtaConfig = require('../models/KtaConfig');
 const path = require('path');
 const fs = require('fs');
@@ -100,16 +99,6 @@ exports.submitApplication = async (req, res) => {
 
       await KtaApplication.update(existing[0].id, updateData);
 
-      await ActivityLog.create({
-        user_id: userId,
-        role_name: 'anggota',
-        activity_type: 'kta_resubmit',
-        description: `Pengajuan ulang KTA oleh ${user.club_name}`,
-        application_id: existing[0].id,
-        old_status: existing[0].status,
-        new_status: 'pending'
-      });
-
       return res.status(200).json({
         success: true,
         message: 'Pengajuan ulang KTA berhasil dikirim',
@@ -137,15 +126,6 @@ exports.submitApplication = async (req, res) => {
     };
 
     const appId = await KtaApplication.create(appData);
-
-    await ActivityLog.create({
-      user_id: userId,
-      role_name: 'anggota',
-      activity_type: 'kta_submit',
-      description: `Pengajuan KTA baru oleh ${user.club_name}`,
-      application_id: appId,
-      new_status: 'pending'
-    });
 
     return res.status(201).json({
       success: true,
@@ -426,16 +406,6 @@ exports.updateStatus = async (req, res) => {
       console.error('PDF generation after status update failed (non-blocking):', pdfErr);
     }
 
-    await ActivityLog.create({
-      user_id: req.user.id,
-      role_name: roleName,
-      activity_type: 'kta_status_update',
-      description: `Status KTA diubah dari ${app.status} ke ${status}`,
-      application_id: parseInt(id),
-      old_status: app.status,
-      new_status: status
-    });
-
     await KtaConfig.addHistory(parseInt(id), status, notes || `Status diubah oleh ${roleName}`);
 
     return res.json({ success: true, message: 'Status berhasil diperbarui' });
@@ -501,27 +471,6 @@ exports.getByBarcode = async (req, res) => {
     });
   } catch (err) {
     console.error('Get KTA by barcode error:', err);
-    return res.status(500).json({ success: false, message: 'Terjadi kesalahan server' });
-  }
-};
-
-// Get activity logs
-exports.getActivityLogs = async (req, res) => {
-  try {
-    const { application_id, limit = 50 } = req.query;
-    const filters = { limit: parseInt(limit) };
-
-    if (application_id) filters.application_id = parseInt(application_id);
-
-    // Role-based filtering
-    if (req.user.role_id === 2 || req.user.role_id === 3) {
-      filters.user_id = req.user.id;
-    }
-
-    const logs = await ActivityLog.findAll(filters);
-    return res.json({ success: true, data: logs });
-  } catch (err) {
-    console.error('Get activity logs error:', err);
     return res.status(500).json({ success: false, message: 'Terjadi kesalahan server' });
   }
 };
@@ -725,14 +674,6 @@ exports.deleteApplication = async (req, res) => {
 
     const db = require('../lib/db-compat');
     await db.query('DELETE FROM kta_applications WHERE id = ?', [parseInt(id)]);
-
-    await ActivityLog.create({
-      user_id: req.user.id,
-      role_name: getRoleName(req.user.role_id),
-      activity_type: 'delete_kta',
-      description: `Menghapus pengajuan KTA #${id} (${app.club_name || ''})`,
-      application_id: parseInt(id),
-    });
 
     return res.json({ success: true, message: 'Pengajuan KTA berhasil dihapus' });
   } catch (err) {

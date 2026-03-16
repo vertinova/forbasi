@@ -34,7 +34,6 @@ router.patch(
 );
 
 router.get('/stats', authenticate, authorize(2, 3, 4), ktaController.getStats);
-router.get('/activity-logs', authenticate, authorize(2, 3, 4), ktaController.getActivityLogs);
 
 // KTA PDF generation & download
 router.post('/applications/:id/generate-pdf', authenticate, authorize(4), ktaController.generateKtaPdf);

@@ -137,6 +137,130 @@ exports.login = async (req, res) => {
   }
 };
 
+/**
+ * Regional Login - Login via regional subdomain (e.g., jabar.forbasi.or.id)
+ * Only allows users (role 1/2/3) from the specified province
+ * PB (role 4), super_admin, and license_users cannot login via regional
+ */
+exports.loginRegional = async (req, res) => {
+  try {
+    const { username, password, region } = req.body;
+    const { getRegion } = require('../config/regions');
+
+    // Validate required fields
+    if (!username || !password) {
+      return res.status(400).json({ success: false, message: 'Username dan password wajib diisi' });
+    }
+
+    if (!region) {
+      return res.status(400).json({ success: false, message: 'Region tidak valid' });
+    }
+
+    // Validate region code
+    const regionConfig = getRegion(region);
+    if (!regionConfig) {
+      return res.status(400).json({ success: false, message: `Region '${region}' tidak terdaftar` });
+    }
+
+    // Only check users table (not super_admin or license_users)
+    const user = await User.findByUsername(username);
+    if (!user) {
+      return res.status(401).json({ success: false, message: 'Username atau password salah' });
+    }
+
+    // Check password
+    const match = await bcrypt.compare(password, user.password);
+    if (!match) {
+      return res.status(401).json({ success: false, message: 'Username atau password salah' });
+    }
+
+    // Reject PB (role 4) - they must use main domain
+    if (user.role_id === 4) {
+      return res.status(403).json({ 
+        success: false, 
+        message: 'Akun PB tidak dapat login melalui subdomain regional. Silakan gunakan domain utama.' 
+      });
+    }
+
+    // Validate user belongs to the region (province_id must match)
+    if (user.province_id !== regionConfig.province_id) {
+      return res.status(403).json({ 
+        success: false, 
+        message: `Akun Anda tidak terdaftar di wilayah ${regionConfig.name}` 
+      });
+    }
+
+    // Generate tokens
+    const tokenPayload = {
+      id: user.id,
+      username: user.username,
+      role_id: user.role_id,
+      role: getRoleName(user.role_id),
+      user_type: 'user',
+      region: region // Include region in token for tracking
+    };
+    const accessToken = generateAccessToken(tokenPayload);
+    const refreshToken = generateRefreshToken(tokenPayload);
+
+    // Fetch logo_path from latest KTA application
+    const latestKta = await prisma.kta_applications.findFirst({
+      where: { user_id: user.id },
+      orderBy: { id: 'desc' },
+      select: { logo_path: true }
+    });
+
+    // Determine redirect path based on role
+    const redirectPaths = {
+      1: '/anggota',   // Anggota -> AnggotaDashboard
+      2: '/pengcab',   // Pengcab -> PengcabDashboard
+      3: '/pengda',    // Pengda -> PengdaDashboard
+    };
+
+    return res.json({
+      success: true,
+      message: `Login berhasil via ${regionConfig.name}`,
+      data: {
+        user: {
+          id: user.id,
+          username: user.username,
+          email: user.email,
+          club_name: user.club_name,
+          role_id: user.role_id,
+          role: getRoleName(user.role_id),
+          province_id: user.province_id,
+          city_id: user.city_id,
+          user_type: 'user',
+          logo_path: latestKta?.logo_path || null,
+          region: regionConfig.name
+        },
+        accessToken,
+        refreshToken,
+        redirect: redirectPaths[user.role_id] || '/dashboard'
+      }
+    });
+  } catch (err) {
+    console.error('Regional login error:', err);
+    return res.status(500).json({ success: false, message: 'Terjadi kesalahan server' });
+  }
+};
+
+/**
+ * Get available regions for login
+ * Public endpoint - no auth required
+ */
+exports.getRegions = async (req, res) => {
+  try {
+    const { getAllRegions } = require('../config/regions');
+    return res.json({
+      success: true,
+      data: getAllRegions()
+    });
+  } catch (err) {
+    console.error('Get regions error:', err);
+    return res.status(500).json({ success: false, message: 'Terjadi kesalahan server' });
+  }
+};
+
 exports.refreshToken = async (req, res) => {
   try {
     const { refreshToken } = req.body;
@@ -204,71 +328,6 @@ exports.getMe = async (req, res) => {
     return res.json({ success: true, data: userData });
   } catch (err) {
     console.error('GetMe error:', err);
-    return res.status(500).json({ success: false, message: 'Terjadi kesalahan server' });
-  }
-};
-
-exports.forgotPassword = async (req, res) => {
-  try {
-    const { email } = req.body;
-    if (!email) {
-      return res.status(400).json({ success: false, message: 'Email wajib diisi' });
-    }
-
-    const user = await User.findByEmail(email);
-    if (!user) {
-      // Return success anyway to prevent email enumeration
-      return res.json({ success: true, message: 'Jika email terdaftar, link reset akan dikirim' });
-    }
-
-    const token = crypto.randomBytes(32).toString('hex');
-    const expiresAt = new Date(Date.now() + 3600000).toISOString().slice(0, 19).replace('T', ' ');
-
-    await User.setResetToken(email, token, expiresAt);
-
-    const resetUrl = `${process.env.FRONTEND_URL}/reset-password?token=${token}`;
-    await sendEmail({
-      to: email,
-      subject: 'Reset Password FORBASI',
-      html: `
-        <h2>Reset Password</h2>
-        <p>Klik link berikut untuk mereset password Anda:</p>
-        <a href="${resetUrl}" style="display:inline-block;padding:12px 24px;background:#0d9500;color:white;text-decoration:none;border-radius:8px;">Reset Password</a>
-        <p>Link berlaku selama 1 jam.</p>
-        <p>Jika Anda tidak meminta reset password, abaikan email ini.</p>
-      `
-    });
-
-    return res.json({ success: true, message: 'Jika email terdaftar, link reset akan dikirim' });
-  } catch (err) {
-    console.error('Forgot password error:', err);
-    return res.status(500).json({ success: false, message: 'Terjadi kesalahan server' });
-  }
-};
-
-exports.resetPassword = async (req, res) => {
-  try {
-    const { token, password } = req.body;
-    if (!token || !password) {
-      return res.status(400).json({ success: false, message: 'Token dan password baru wajib diisi' });
-    }
-
-    if (password.length < 6) {
-      return res.status(400).json({ success: false, message: 'Password minimal 6 karakter' });
-    }
-
-    const user = await User.findByResetToken(token);
-    if (!user) {
-      return res.status(400).json({ success: false, message: 'Token tidak valid atau sudah expired' });
-    }
-
-    const hashedPassword = await bcrypt.hash(password, 12);
-    await User.update(user.id, { password: hashedPassword });
-    await User.clearResetToken(user.id);
-
-    return res.json({ success: true, message: 'Password berhasil direset' });
-  } catch (err) {
-    console.error('Reset password error:', err);
     return res.status(500).json({ success: false, message: 'Terjadi kesalahan server' });
   }
 };

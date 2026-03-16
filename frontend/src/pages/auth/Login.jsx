@@ -165,7 +165,7 @@ export default function Login() {
                 </div>
 
                 <div className="auth-actions-row">
-                  <Link to="/forgot-password" className="auth-forgot">Lupa password?</Link>
+                  
                 </div>
 
                 <button type="submit" className="auth-btn primary" disabled={loading}>

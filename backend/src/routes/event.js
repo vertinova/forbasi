@@ -26,6 +26,7 @@ router.post('/pengcab/:id/reject', authorize(2), eventController.pengcabReject);
 // Admin (Pengda/PB): review events
 router.get('/admin/pending', authorize(3, 4), eventController.getPendingAdminApproval);
 router.get('/admin/all', authorize(2, 3, 4), eventController.getAllEvents);
+router.get('/admin/stats', authorize(3, 4), eventController.getEventStats);
 router.post('/admin/:id/approve', authorize(3, 4), eventController.adminApprove);
 router.post('/admin/:id/reject', authorize(3, 4), eventController.adminReject);
 

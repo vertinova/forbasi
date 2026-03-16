@@ -299,7 +299,13 @@ exports.pengcabReject = async (req, res) => {
 // Get events for admin approval
 exports.getPendingAdminApproval = async (req, res) => {
   try {
-    const events = await EventApplication.findPendingAdminApproval(req.query);
+    const filters = { ...req.query };
+    // Pengda (role 3) can only see events from their province
+    if (req.user.role_id === 3) {
+      const user = await User.findById(req.user.id);
+      if (user?.province_id) filters.province_id = user.province_id;
+    }
+    const events = await EventApplication.findPendingAdminApproval(filters);
     return res.json({ success: true, data: events });
   } catch (err) {
     console.error('Get pending admin error:', err);
@@ -310,10 +316,51 @@ exports.getPendingAdminApproval = async (req, res) => {
 // Get all events (admin overview)
 exports.getAllEvents = async (req, res) => {
   try {
-    const events = await EventApplication.findAllWithUser(req.query);
+    const filters = { ...req.query };
+    // Pengda (role 3) can only see events from their province
+    if (req.user.role_id === 3) {
+      const user = await User.findById(req.user.id);
+      if (user?.province_id) filters.province_id = user.province_id;
+    }
+    const events = await EventApplication.findAllWithUser(filters);
     return res.json({ success: true, data: events });
   } catch (err) {
     console.error('Get all events error:', err);
+    return res.status(500).json({ success: false, message: 'Terjadi kesalahan server' });
+  }
+};
+
+// Get event stats for admin dashboard
+exports.getEventStats = async (req, res) => {
+  try {
+    const db = require('./../../src/config/database');
+    let provinceFilter = '';
+    const args = [];
+    if (req.user.role_id === 3) {
+      const user = await User.findById(req.user.id);
+      if (user?.province_id) {
+        provinceFilter = 'AND u.province_id = ?';
+        args.push(user.province_id);
+      }
+    }
+    const base = `FROM event_applications ea JOIN users u ON ea.user_id = u.id WHERE 1=1 ${provinceFilter}`;
+    const [total] = await db.query(`SELECT COUNT(*) as c ${base}`, args);
+    const [pendingEvent] = await db.query(`SELECT COUNT(*) as c ${base} AND ea.jenis_pengajuan = 'event_penyelenggara' AND ea.status = 'approved_pengcab'`, args);
+    const [pendingKejurcab] = await db.query(`SELECT COUNT(*) as c ${base} AND ea.jenis_pengajuan = 'kejurcab' AND ea.status = 'submitted'`, args);
+    const [approved] = await db.query(`SELECT COUNT(*) as c ${base} AND ea.status = 'approved_admin'`, args);
+    const [rejected] = await db.query(`SELECT COUNT(*) as c ${base} AND ea.status = 'rejected_admin'`, args);
+    return res.json({
+      success: true,
+      data: {
+        total: total[0].c,
+        pending_event: pendingEvent[0].c,
+        pending_kejurcab: pendingKejurcab[0].c,
+        approved: approved[0].c,
+        rejected: rejected[0].c
+      }
+    });
+  } catch (err) {
+    console.error('Get event stats error:', err);
     return res.status(500).json({ success: false, message: 'Terjadi kesalahan server' });
   }
 };
