@@ -8,11 +8,16 @@ const fileUrl = (p) => p ? `${API_BASE}/uploads/regional/${p}` : null;
 
 const TABS = [
   { key: 'hero',     label: 'Hero Slides',  icon: 'fa-image' },
+  { key: 'struktur', label: 'Struktur Org',  icon: 'fa-sitemap' },
   { key: 'berita',   label: 'Berita',        icon: 'fa-newspaper' },
-  { key: 'struktur', label: 'Struktur',      icon: 'fa-sitemap' },
-  { key: 'feedback', label: 'Testimoni',     icon: 'fa-comments' },
+  { key: 'feedback', label: 'Feedback',      icon: 'fa-comments' },
+  { key: 'footer',   label: 'Footer',        icon: 'fa-shoe-prints' },
+  { key: 'sponsor',  label: 'Sponsor',       icon: 'fa-handshake' },
+  { key: 'merch',    label: 'Merchandise',   icon: 'fa-tshirt' },
   { key: 'config',   label: 'Konfigurasi',   icon: 'fa-cog' },
 ];
+
+const CONFIG_TABS = ['footer', 'sponsor', 'merch', 'config'];
 
 /* ── Reusable styles ── */
 const INPUT = 'w-full px-3.5 py-2.5 text-sm bg-white/[0.05] border border-white/[0.08] text-gray-200 placeholder-gray-500 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500/50 transition-all';
@@ -99,7 +104,7 @@ export default function ManageRegionalLanding({ embedded }) {
   }, []);
 
   useEffect(() => {
-    const fetchers = { hero: fetchHero, berita: fetchBerita, struktur: fetchStruktur, feedback: fetchFeedback, config: fetchConfig };
+    const fetchers = { hero: fetchHero, berita: fetchBerita, struktur: fetchStruktur, feedback: fetchFeedback, config: fetchConfig, footer: fetchConfig, sponsor: fetchConfig, merch: fetchConfig };
     fetchers[tab]?.();
   }, [tab, fetchHero, fetchBerita, fetchStruktur, fetchFeedback, fetchConfig]);
 
@@ -314,39 +319,181 @@ export default function ManageRegionalLanding({ embedded }) {
     </div>
   );
 
-  /* ── Config section ── */
+  /* ── Helper: parse JSON config safely ── */
+  const parseJsonConfig = (key, fallback = []) => {
+    try { return JSON.parse(siteConfig[key] || '[]'); }
+    catch { return fallback; }
+  };
+  const setJsonConfig = (key, val) => setSiteConfig(prev => ({ ...prev, [key]: JSON.stringify(val) }));
+
+  /* ── Config section (Konfigurasi Umum) ── */
   const renderConfigSection = () => {
     const configKeys = [
-      { key: 'site_name',    label: 'Nama Situs',     placeholder: 'FORBASI Jawa Barat' },
-      { key: 'site_tagline', label: 'Tagline',         placeholder: 'Federasi Olahraga Binaraga ...' },
-      { key: 'contact_email', label: 'Email Kontak',   placeholder: 'jabar@forbasi.or.id' },
-      { key: 'contact_phone', label: 'Telepon Kontak', placeholder: '08xx-xxxx-xxxx' },
-      { key: 'contact_address', label: 'Alamat',       placeholder: 'Jl. ...' },
-      { key: 'instagram_url', label: 'Instagram URL',  placeholder: 'https://instagram.com/...' },
-      { key: 'facebook_url',  label: 'Facebook URL',   placeholder: 'https://facebook.com/...' },
-      { key: 'youtube_url',   label: 'YouTube URL',    placeholder: 'https://youtube.com/...' },
-      { key: 'whatsapp_number', label: 'WhatsApp',     placeholder: '628xxx' },
+      { key: 'site_name',      label: 'Nama Organisasi',  placeholder: 'FORBASI Jawa Barat' },
+      { key: 'site_tagline',   label: 'Tagline',          placeholder: 'Federasi Olahraga Binaraga ...' },
+      { key: 'contact_email',  label: 'Email Kontak',     placeholder: 'jabar@forbasi.or.id' },
+      { key: 'contact_phone',  label: 'Telepon Kontak',   placeholder: '08xx-xxxx-xxxx' },
+      { key: 'contact_address',label: 'Alamat',           placeholder: 'Jl. ...' },
+      { key: 'instagram_url',  label: 'Instagram URL',    placeholder: 'https://instagram.com/...' },
+      { key: 'facebook_url',   label: 'Facebook URL',     placeholder: 'https://facebook.com/...' },
+      { key: 'youtube_url',    label: 'YouTube URL',      placeholder: 'https://youtube.com/...' },
+      { key: 'tiktok_url',     label: 'TikTok URL',       placeholder: 'https://tiktok.com/@...' },
+      { key: 'whatsapp_number',label: 'WhatsApp',         placeholder: '628xxx' },
+      { key: 'website_url',    label: 'Website URL',      placeholder: 'https://jabar.forbasi.or.id' },
     ];
+    return renderConfigForm('Konfigurasi Umum', configKeys);
+  };
 
-    return (
-      <div className="space-y-6">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-base font-semibold text-white">Konfigurasi Situs</h3>
-          <button onClick={handleSaveConfig} disabled={saving} className={BTN_PRIMARY}>
-            <i className={`fas ${saving ? 'fa-spinner fa-spin' : 'fa-save'}`} />
-            {saving ? 'Menyimpan...' : 'Simpan'}
-          </button>
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {configKeys.map(({ key, label, placeholder }) => (
-            <div key={key}>
-              <label className={LABEL}>{label}</label>
+  /* ── Footer section ── */
+  const renderFooterSection = () => {
+    const configKeys = [
+      { key: 'footer_description',  label: 'Deskripsi Footer',    placeholder: 'Deskripsi singkat organisasi di footer...' },
+      { key: 'footer_copyright',    label: 'Teks Copyright',      placeholder: '© 2026 FORBASI Jawa Barat. All rights reserved.' },
+      { key: 'footer_address',      label: 'Alamat di Footer',    placeholder: 'Jl. ..., Bandung, Jawa Barat' },
+      { key: 'footer_phone',        label: 'Telepon di Footer',   placeholder: '022-xxxxxxx' },
+      { key: 'footer_email',        label: 'Email di Footer',     placeholder: 'info@jabar.forbasi.or.id' },
+      { key: 'footer_map_embed',    label: 'Google Maps Embed URL',placeholder: 'https://www.google.com/maps/embed?...' },
+      { key: 'footer_extra_text',   label: 'Teks Tambahan',       placeholder: 'Informasi tambahan di footer' },
+    ];
+    return renderConfigForm('Konten Footer', configKeys);
+  };
+
+  /* ── Reusable config form renderer ── */
+  const renderConfigForm = (title, configKeys) => (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="text-base font-semibold text-white">{title}</h3>
+        <button onClick={handleSaveConfig} disabled={saving} className={BTN_PRIMARY}>
+          <i className={`fas ${saving ? 'fa-spinner fa-spin' : 'fa-save'}`} />
+          {saving ? 'Menyimpan...' : 'Simpan'}
+        </button>
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {configKeys.map(({ key, label, placeholder }) => (
+          <div key={key} className={key.includes('description') || key.includes('extra') || key.includes('embed') ? 'md:col-span-2' : ''}>
+            <label className={LABEL}>{label}</label>
+            {key.includes('description') || key.includes('extra') ? (
+              <textarea
+                className={INPUT + ' min-h-[80px]'}
+                placeholder={placeholder}
+                value={siteConfig[key] || ''}
+                onChange={e => setSiteConfig(prev => ({ ...prev, [key]: e.target.value }))}
+              />
+            ) : (
               <input
                 className={INPUT}
                 placeholder={placeholder}
                 value={siteConfig[key] || ''}
                 onChange={e => setSiteConfig(prev => ({ ...prev, [key]: e.target.value }))}
               />
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+
+  /* ── Sponsor section (dynamic list stored as JSON) ── */
+  const renderSponsorSection = () => {
+    const sponsors = parseJsonConfig('sponsors_json');
+    const addSponsor = () => setJsonConfig('sponsors_json', [...sponsors, { nama: '', logo_url: '', link: '' }]);
+    const removeSponsor = (i) => { const arr = [...sponsors]; arr.splice(i, 1); setJsonConfig('sponsors_json', arr); };
+    const updateSponsor = (i, field, val) => { const arr = [...sponsors]; arr[i] = { ...arr[i], [field]: val }; setJsonConfig('sponsors_json', arr); };
+
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-base font-semibold text-white">Logo Sponsor</h3>
+          <div className="flex gap-2">
+            <button onClick={addSponsor} className={BTN_GHOST}><i className="fas fa-plus" /> Tambah Sponsor</button>
+            <button onClick={handleSaveConfig} disabled={saving} className={BTN_PRIMARY}>
+              <i className={`fas ${saving ? 'fa-spinner fa-spin' : 'fa-save'}`} />
+              {saving ? 'Menyimpan...' : 'Simpan'}
+            </button>
+          </div>
+        </div>
+        {sponsors.length === 0 && <p className="text-sm text-gray-500 py-8 text-center">Belum ada sponsor. Klik "Tambah Sponsor" untuk mulai.</p>}
+        <div className="space-y-3">
+          {sponsors.map((s, i) => (
+            <div key={i} className="bg-white/[0.03] rounded-xl border border-white/[0.06] p-4">
+              <div className="flex items-start gap-4">
+                <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-3">
+                  <div>
+                    <label className={LABEL}>Nama Sponsor</label>
+                    <input className={INPUT} placeholder="PT Sponsor" value={s.nama || ''} onChange={e => updateSponsor(i, 'nama', e.target.value)} />
+                  </div>
+                  <div>
+                    <label className={LABEL}>URL Logo</label>
+                    <input className={INPUT} placeholder="https://... atau path gambar" value={s.logo_url || ''} onChange={e => updateSponsor(i, 'logo_url', e.target.value)} />
+                  </div>
+                  <div>
+                    <label className={LABEL}>Link (opsional)</label>
+                    <input className={INPUT} placeholder="https://sponsor.com" value={s.link || ''} onChange={e => updateSponsor(i, 'link', e.target.value)} />
+                  </div>
+                </div>
+                <button onClick={() => removeSponsor(i)} className="mt-5 w-8 h-8 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500/20 flex items-center justify-center flex-shrink-0">
+                  <i className="fas fa-trash text-xs" />
+                </button>
+              </div>
+              {s.logo_url && <img src={s.logo_url} alt={s.nama} className="mt-3 h-12 object-contain rounded" onError={e => { e.target.style.display = 'none'; }} />}
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  };
+
+  /* ── Merchandise section (dynamic list stored as JSON) ── */
+  const renderMerchSection = () => {
+    const items = parseJsonConfig('merchandise_json');
+    const addItem = () => setJsonConfig('merchandise_json', [...items, { nama: '', harga: '', image_url: '', link: '', deskripsi: '' }]);
+    const removeItem = (i) => { const arr = [...items]; arr.splice(i, 1); setJsonConfig('merchandise_json', arr); };
+    const updateItem = (i, field, val) => { const arr = [...items]; arr[i] = { ...arr[i], [field]: val }; setJsonConfig('merchandise_json', arr); };
+
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-base font-semibold text-white">Merchandise</h3>
+          <div className="flex gap-2">
+            <button onClick={addItem} className={BTN_GHOST}><i className="fas fa-plus" /> Tambah Item</button>
+            <button onClick={handleSaveConfig} disabled={saving} className={BTN_PRIMARY}>
+              <i className={`fas ${saving ? 'fa-spinner fa-spin' : 'fa-save'}`} />
+              {saving ? 'Menyimpan...' : 'Simpan'}
+            </button>
+          </div>
+        </div>
+        {items.length === 0 && <p className="text-sm text-gray-500 py-8 text-center">Belum ada merchandise. Klik "Tambah Item" untuk mulai.</p>}
+        <div className="space-y-3">
+          {items.map((m, i) => (
+            <div key={i} className="bg-white/[0.03] rounded-xl border border-white/[0.06] p-4">
+              <div className="flex items-start gap-4">
+                <div className="flex-1 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+                  <div>
+                    <label className={LABEL}>Nama Item</label>
+                    <input className={INPUT} placeholder="Kaos FORBASI" value={m.nama || ''} onChange={e => updateItem(i, 'nama', e.target.value)} />
+                  </div>
+                  <div>
+                    <label className={LABEL}>Harga</label>
+                    <input className={INPUT} placeholder="Rp 150.000" value={m.harga || ''} onChange={e => updateItem(i, 'harga', e.target.value)} />
+                  </div>
+                  <div>
+                    <label className={LABEL}>URL Gambar</label>
+                    <input className={INPUT} placeholder="https://... atau path" value={m.image_url || ''} onChange={e => updateItem(i, 'image_url', e.target.value)} />
+                  </div>
+                  <div>
+                    <label className={LABEL}>Link Beli (opsional)</label>
+                    <input className={INPUT} placeholder="https://tokopedia.com/..." value={m.link || ''} onChange={e => updateItem(i, 'link', e.target.value)} />
+                  </div>
+                  <div className="md:col-span-2 lg:col-span-4">
+                    <label className={LABEL}>Deskripsi</label>
+                    <input className={INPUT} placeholder="Deskripsi singkat" value={m.deskripsi || ''} onChange={e => updateItem(i, 'deskripsi', e.target.value)} />
+                  </div>
+                </div>
+                <button onClick={() => removeItem(i)} className="mt-5 w-8 h-8 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500/20 flex items-center justify-center flex-shrink-0">
+                  <i className="fas fa-trash text-xs" />
+                </button>
+              </div>
+              {m.image_url && <img src={m.image_url} alt={m.nama} className="mt-3 h-16 object-contain rounded" onError={e => { e.target.style.display = 'none'; }} />}
             </div>
           ))}
         </div>
@@ -564,8 +711,8 @@ export default function ManageRegionalLanding({ embedded }) {
         ))}
       </div>
 
-      {/* Add button (not for config tab) */}
-      {tab !== 'config' && (
+      {/* Add button (not for config-based tabs) */}
+      {!CONFIG_TABS.includes(tab) && (
         <div className="flex justify-end">
           {!showForm ? (
             <button onClick={() => { resetForm(); setShowForm(true); }} className={BTN_PRIMARY}>
@@ -580,7 +727,7 @@ export default function ManageRegionalLanding({ embedded }) {
       )}
 
       {/* Form */}
-      {showForm && tab !== 'config' && (
+      {showForm && !CONFIG_TABS.includes(tab) && (
         <div className="bg-white/[0.03] rounded-2xl border border-white/[0.06] p-6">
           <h3 className="text-sm font-semibold text-white mb-4">{editId ? 'Edit' : 'Tambah'} {TABS.find(t => t.key === tab)?.label}</h3>
           {formRenderers[tab]?.()}
@@ -600,8 +747,13 @@ export default function ManageRegionalLanding({ embedded }) {
           <div className="flex items-center justify-center py-16">
             <div className="w-8 h-8 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin" />
           </div>
-        ) : tab === 'config' ? (
-          <div className="p-6">{renderConfigSection()}</div>
+        ) : CONFIG_TABS.includes(tab) ? (
+          <div className="p-6">
+            {tab === 'config' && renderConfigSection()}
+            {tab === 'footer' && renderFooterSection()}
+            {tab === 'sponsor' && renderSponsorSection()}
+            {tab === 'merch' && renderMerchSection()}
+          </div>
         ) : (
           tableRenderers[tab]?.()
         )}

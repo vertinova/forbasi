@@ -12,6 +12,7 @@ import KejurdaManage from '../kejurda/KejurdaManage';
 import KtaConfigPage from '../config/KtaConfigPage';
 import ManageReregistration from '../config/ManageReregistration';
 import ManageRegionalLanding from '../landing/ManageRegionalLanding';
+import ManageRekomendasi from '../rekomendasi/ManageRekomendasi';
 
 const API_BASE = (import.meta.env.VITE_API_URL || 'http://localhost:5000/api').replace(/\/api$/, '');
 
@@ -139,6 +140,8 @@ export default function PengdaDashboard() {
     } catch (err) { toast.error(err.response?.data?.message || 'Gagal'); }
   };
 
+  const isJabar = user?.province_id === 12;
+
   const menuItems = [
     { icon: <i className="fas fa-file-invoice" />, label: 'Pengajuan KTA', onClick: () => setActiveTab('kta'), active: activeTab === 'kta' },
     { icon: <i className="fas fa-users" />, label: 'Daftar Anggota', onClick: () => setActiveTab('members'), active: activeTab === 'members' },
@@ -146,9 +149,10 @@ export default function PengdaDashboard() {
     { divider: true, dividerLabel: 'Pengaturan' },
     { icon: <i className="fas fa-trophy" />, label: 'Kejurnas', onClick: () => setActiveTab('kejurnas'), active: activeTab === 'kejurnas' },
     { icon: <i className="fas fa-medal" />, label: 'Kejurda', onClick: () => setActiveTab('kejurda'), active: activeTab === 'kejurda' },
+    ...(isJabar ? [{ icon: <i className="fas fa-file-signature" />, label: 'Rekomendasi', onClick: () => setActiveTab('rekomendasi'), active: activeTab === 'rekomendasi' }] : []),
     { icon: <i className="fas fa-cogs" />, label: 'Konfigurasi KTA', onClick: () => setActiveTab('kta_config'), active: activeTab === 'kta_config' },
     { icon: <i className="fas fa-redo" />, label: 'Daftar Ulang', onClick: () => setActiveTab('daftar_ulang'), active: activeTab === 'daftar_ulang' },
-    { icon: <i className="fas fa-globe" />, label: 'Landing Page', onClick: () => setActiveTab('landing'), active: activeTab === 'landing' },
+    ...(isJabar ? [{ icon: <i className="fas fa-globe" />, label: 'Landing Page', onClick: () => setActiveTab('landing'), active: activeTab === 'landing' }] : []),
   ];
 
   const renderKtaSection = () => (
@@ -553,7 +557,8 @@ export default function PengdaDashboard() {
       {activeTab === 'kejurda' && <KejurdaManage embedded />}
       {activeTab === 'kta_config' && <KtaConfigPage embedded />}
       {activeTab === 'daftar_ulang' && <ManageReregistration embedded />}
-      {activeTab === 'landing' && <ManageRegionalLanding embedded />}
+      {activeTab === 'landing' && isJabar && <ManageRegionalLanding embedded />}
+      {activeTab === 'rekomendasi' && isJabar && <ManageRekomendasi embedded />}
 
       <ConfirmModal show={confirm.show} title={confirm.title} message={confirm.message}
         onConfirm={handleUpdateStatus}
