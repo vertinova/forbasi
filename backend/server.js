@@ -40,9 +40,24 @@ app.use(helmet({
   },
 }));
 app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+  origin: function (origin, callback) {
+    // Allow requests with no origin (mobile apps, curl, etc.)
+    if (!origin) return callback(null, true);
+    const allowed = [
+      process.env.FRONTEND_URL || 'http://localhost:5173',
+      'http://localhost:5173',
+      'http://localhost:5174',
+      'https://forbasi.or.id',
+      'http://forbasi.or.id',
+    ];
+    // Allow all *.forbasi.or.id subdomains
+    if (/^https?:\/\/([a-z0-9-]+\.)?forbasi\.or\.id$/.test(origin) || allowed.includes(origin)) {
+      return callback(null, true);
+    }
+    callback(null, false);
+  },
   credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-API-Key']
 }));
 
