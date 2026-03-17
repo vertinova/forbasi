@@ -12,6 +12,9 @@ export default defineConfig({
     __APP_VERSION__: JSON.stringify(versionJson.version),
   },
   server: {
+    hmr: {
+      clientPort: 5173,
+    },
     proxy: {
       '/uploads': 'http://localhost:5000',
       '/api': 'http://localhost:5000',
