@@ -535,3 +535,115 @@ exports.registerPenyelenggara = async (req, res) => {
   }
 };
 
+// ====== SSO (Single Sign-On) dari Regional ======
+
+// In-memory store untuk SSO tokens (sekali pakai, TTL 60 detik)
+const ssoTokenStore = new Map();
+
+// Bersihkan expired tokens setiap 5 menit
+setInterval(() => {
+  const now = Date.now();
+  for (const [token, data] of ssoTokenStore.entries()) {
+    if (now > data.expiresAt) ssoTokenStore.delete(token);
+  }
+}, 5 * 60 * 1000);
+
+// POST /api/auth/sso-exchange — dipanggil oleh backend regional via API Key
+exports.ssoExchange = async (req, res) => {
+  try {
+    const { forbasiId, role_id, role, user_type, region } = req.body;
+
+    if (!forbasiId) {
+      return res.status(400).json({ success: false, message: 'forbasiId wajib diisi.' });
+    }
+
+    // Verifikasi user ada di database Pusat
+    const user = await User.findById(forbasiId);
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User tidak ditemukan di Pusat.' });
+    }
+
+    // Tentukan redirect path berdasarkan role
+    const REDIRECT_MAP = { 1: '/anggota', 2: '/pengcab', 3: '/pengda', 4: '/pb', 5: '/penyelenggara' };
+    const redirectPath = REDIRECT_MAP[role_id] || '/anggota';
+
+    // Buat one-time SSO token
+    const ssoToken = crypto.randomBytes(32).toString('hex');
+
+    ssoTokenStore.set(ssoToken, {
+      userId: user.id,
+      username: user.username,
+      role_id: role_id,
+      role: role,
+      user_type: user_type || 'user',
+      region: region,
+      redirectPath,
+      expiresAt: Date.now() + 60 * 1000,
+    });
+
+    res.json({ success: true, ssoToken, redirectPath });
+  } catch (error) {
+    console.error('[SSO Exchange] Error:', error);
+    res.status(500).json({ success: false, message: 'Gagal membuat SSO token.' });
+  }
+};
+
+// POST /api/auth/sso-verify — dipanggil oleh frontend Pusat untuk tukar SSO token → JWT
+exports.ssoVerify = async (req, res) => {
+  try {
+    const { token } = req.body;
+    if (!token) {
+      return res.status(400).json({ success: false, message: 'Token wajib diisi.' });
+    }
+
+    const data = ssoTokenStore.get(token);
+    if (!data) {
+      return res.status(401).json({ success: false, message: 'Token tidak valid atau sudah expired.' });
+    }
+
+    // Hapus token (sekali pakai)
+    ssoTokenStore.delete(token);
+
+    if (Date.now() > data.expiresAt) {
+      return res.status(401).json({ success: false, message: 'Token sudah expired.' });
+    }
+
+    // Buat JWT Pusat
+    const payload = {
+      id: data.userId,
+      username: data.username,
+      role_id: data.role_id,
+      role: data.role,
+      user_type: data.user_type,
+      region: data.region,
+    };
+
+    const accessToken = generateAccessToken(payload);
+    const refreshToken = generateRefreshToken(payload);
+
+    // Ambil user data lengkap
+    const user = await User.findById(data.userId);
+
+    res.json({
+      success: true,
+      data: {
+        accessToken,
+        refreshToken,
+        user: {
+          id: user.id,
+          username: user.username,
+          full_name: user.full_name || user.club_name,
+          role_id: data.role_id,
+          role: data.role,
+          user_type: data.user_type,
+          province_id: user.province_id,
+        },
+        redirectPath: data.redirectPath,
+      }
+    });
+  } catch (error) {
+    console.error('[SSO Verify] Error:', error);
+    res.status(500).json({ success: false, message: 'Gagal verifikasi SSO token.' });
+  }
+};
+

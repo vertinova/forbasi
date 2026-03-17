@@ -35,6 +35,7 @@ const EventDetail = lazy(() => import('./pages/event/EventDetail'));
 const EventManage = lazy(() => import('./pages/event/EventManage'));
 const KejurcabSubmitForm = lazy(() => import('./pages/event/KejurcabSubmitForm'));
 const KejurdaManage = lazy(() => import('./pages/kejurda/KejurdaManage'));
+const SSOCallback = lazy(() => import('./pages/auth/SSOCallback'));
 
 const PageLoader = () => (
   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', background: '#0c1222' }}>
@@ -58,6 +59,7 @@ export default function App() {
           <Route path="/register-license" element={<RegisterLicense />} />
           <Route path="/verify/:barcodeId" element={<VerifyKta />} />
           <Route path="/kejurnas/teams" element={<ApprovedTeams />} />
+          <Route path="/sso-callback" element={<SSOCallback />} />
 
           {/* Anggota (role_id: 1) */}
           <Route path="/anggota" element={<ProtectedRoute allowedRoles={[1]}><AnggotaDashboard /></ProtectedRoute>} />
