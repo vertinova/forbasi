@@ -1,7 +1,6 @@
 const router = require('express').Router();
 const authController = require('../controllers/authController');
 const { authenticate } = require('../middleware/auth');
-const { authenticateApiKey, requirePermission } = require('../middleware/apiKeyAuth');
 
 router.post('/login', authController.login);
 router.post('/login-regional', authController.loginRegional);
@@ -13,8 +12,7 @@ router.post('/register', authController.registerUser);
 router.post('/register-license', authController.registerLicenseUser);
 router.post('/register-penyelenggara', authController.registerPenyelenggara);
 
-// SSO endpoints
-router.post('/sso-exchange', authenticateApiKey, requirePermission('users:read'), authController.ssoExchange);
-router.post('/sso-verify', authController.ssoVerify);
+// SSO login — dipanggil oleh frontend Pusat saat user datang dari regional
+router.post('/sso-login', authController.ssoLogin);
 
 module.exports = router;

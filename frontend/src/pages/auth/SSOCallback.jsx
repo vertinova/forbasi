@@ -11,21 +11,21 @@ export default function SSOCallback() {
 
   useEffect(() => {
     const token = searchParams.get('token');
-    const redirect = searchParams.get('redirect') || '/anggota';
+    const region = searchParams.get('region') || 'jabar';
 
     if (!token) {
       setError('Token SSO tidak ditemukan.');
       return;
     }
 
-    api.post('/auth/sso-verify', { token })
+    api.post('/auth/sso-login', { token, region })
       .then(async ({ data }) => {
         if (data.success) {
           localStorage.setItem('accessToken', data.data.accessToken);
           localStorage.setItem('refreshToken', data.data.refreshToken);
           localStorage.setItem('user', JSON.stringify(data.data.user));
           await fetchUser();
-          navigate(data.data.redirectPath || redirect, { replace: true });
+          navigate(data.data.redirectPath || '/anggota', { replace: true });
         } else {
           setError(data.message || 'SSO gagal.');
         }

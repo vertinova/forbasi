@@ -59,7 +59,7 @@ export default function App() {
           <Route path="/register-license" element={<RegisterLicense />} />
           <Route path="/verify/:barcodeId" element={<VerifyKta />} />
           <Route path="/kejurnas/teams" element={<ApprovedTeams />} />
-          <Route path="/sso-callback" element={<SSOCallback />} />
+          <Route path="/sso-login" element={<SSOCallback />} />
 
           {/* Anggota (role_id: 1) */}
           <Route path="/anggota" element={<ProtectedRoute allowedRoles={[1]}><AnggotaDashboard /></ProtectedRoute>} />

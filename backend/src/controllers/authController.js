@@ -537,92 +537,87 @@ exports.registerPenyelenggara = async (req, res) => {
 
 // ====== SSO (Single Sign-On) dari Regional ======
 
-// In-memory store untuk SSO tokens (sekali pakai, TTL 60 detik)
-const ssoTokenStore = new Map();
+const axios = require('axios');
 
-// Bersihkan expired tokens setiap 5 menit
-setInterval(() => {
-  const now = Date.now();
-  for (const [token, data] of ssoTokenStore.entries()) {
-    if (now > data.expiresAt) ssoTokenStore.delete(token);
-  }
-}, 5 * 60 * 1000);
-
-// POST /api/auth/sso-exchange — dipanggil oleh backend regional via API Key
-exports.ssoExchange = async (req, res) => {
-  try {
-    const { forbasiId, role_id, role, user_type, region } = req.body;
-
-    if (!forbasiId) {
-      return res.status(400).json({ success: false, message: 'forbasiId wajib diisi.' });
-    }
-
-    // Verifikasi user ada di database Pusat
-    const user = await User.findById(forbasiId);
-    if (!user) {
-      return res.status(404).json({ success: false, message: 'User tidak ditemukan di Pusat.' });
-    }
-
-    // Tentukan redirect path berdasarkan role
-    const REDIRECT_MAP = { 1: '/anggota', 2: '/pengcab', 3: '/pengda', 4: '/pb', 5: '/penyelenggara' };
-    const redirectPath = REDIRECT_MAP[role_id] || '/anggota';
-
-    // Buat one-time SSO token
-    const ssoToken = crypto.randomBytes(32).toString('hex');
-
-    ssoTokenStore.set(ssoToken, {
-      userId: user.id,
-      username: user.username,
-      role_id: role_id,
-      role: role,
-      user_type: user_type || 'user',
-      region: region,
-      redirectPath,
-      expiresAt: Date.now() + 60 * 1000,
-    });
-
-    res.json({ success: true, ssoToken, redirectPath });
-  } catch (error) {
-    console.error('[SSO Exchange] Error:', error);
-    res.status(500).json({ success: false, message: 'Gagal membuat SSO token.' });
-  }
+// Mapping region → base URL backend regional
+const REGIONAL_BACKENDS = {
+  jabar: 'https://jabar.forbasi.or.id',
 };
 
-// POST /api/auth/sso-verify — dipanggil oleh frontend Pusat untuk tukar SSO token → JWT
-exports.ssoVerify = async (req, res) => {
+// Mapping role Jabar → role Pusat
+const ROLE_MAP = {
+  'ADMIN':          { role_id: 3, role: 'pengda', user_type: 'user' },
+  'PENGCAB':        { role_id: 2, role: 'pengcab', user_type: 'user' },
+  'USER':           { role_id: 1, role: 'anggota', user_type: 'user' },
+  'PENYELENGGARA':  { role_id: 5, role: 'penyelenggara', user_type: 'user' },
+};
+
+const REDIRECT_MAP = { 1: '/anggota', 2: '/pengcab', 3: '/pengda', 4: '/pb', 5: '/penyelenggara' };
+
+// POST /api/auth/sso-login — dipanggil oleh frontend Pusat saat user datang dari regional
+// Flow: Frontend kirim token + region → Backend call regional sso-validate → buat JWT Pusat
+exports.ssoLogin = async (req, res) => {
   try {
-    const { token } = req.body;
+    const { token, region } = req.body;
     if (!token) {
       return res.status(400).json({ success: false, message: 'Token wajib diisi.' });
     }
 
-    const data = ssoTokenStore.get(token);
-    if (!data) {
-      return res.status(401).json({ success: false, message: 'Token tidak valid atau sudah expired.' });
+    // Default ke jabar jika region tidak disebut
+    const regionKey = (region || 'jabar').toLowerCase();
+    const regionalBase = REGIONAL_BACKENDS[regionKey];
+    if (!regionalBase) {
+      return res.status(400).json({ success: false, message: `Region "${regionKey}" tidak dikenali.` });
     }
 
-    // Hapus token (sekali pakai)
-    ssoTokenStore.delete(token);
-
-    if (Date.now() > data.expiresAt) {
-      return res.status(401).json({ success: false, message: 'Token sudah expired.' });
+    // Call regional backend sso-validate
+    let ssoData;
+    try {
+      const response = await axios.post(`${regionalBase}/api/auth/sso-validate`, { token }, { timeout: 10000 });
+      ssoData = response.data;
+    } catch (err) {
+      const msg = err.response?.data?.error || err.message;
+      console.error(`[SSO] Validate ke ${regionKey} gagal:`, msg);
+      return res.status(401).json({ success: false, message: msg || 'Token SSO tidak valid atau sudah expired.' });
     }
+
+    if (!ssoData.valid || !ssoData.user) {
+      return res.status(401).json({ success: false, message: 'Token SSO tidak valid.' });
+    }
+
+    const { forbasiId, role: regionalRole, name, email } = ssoData.user;
+
+    // Cari user di database Pusat berdasarkan forbasiId
+    let user = forbasiId ? await User.findById(forbasiId) : null;
+
+    // Fallback: cari berdasarkan email
+    if (!user && email) {
+      user = await User.findByEmail(email);
+    }
+
+    if (!user) {
+      return res.status(404).json({ 
+        success: false, 
+        message: 'Akun tidak ditemukan di FORBASI Pusat. Pastikan akun sudah terdaftar.' 
+      });
+    }
+
+    // Map role regional ke role pusat
+    const pusatRole = ROLE_MAP[regionalRole] || { role_id: user.role_id, role: getRoleName(user.role_id), user_type: 'user' };
+    const redirectPath = REDIRECT_MAP[pusatRole.role_id] || '/anggota';
 
     // Buat JWT Pusat
     const payload = {
-      id: data.userId,
-      username: data.username,
-      role_id: data.role_id,
-      role: data.role,
-      user_type: data.user_type,
-      region: data.region,
+      id: user.id,
+      username: user.username,
+      role_id: pusatRole.role_id,
+      role: pusatRole.role,
+      user_type: pusatRole.user_type,
+      region: regionKey,
     };
 
     const accessToken = generateAccessToken(payload);
     const refreshToken = generateRefreshToken(payload);
-
-    // Ambil user data lengkap
-    const user = await User.findById(data.userId);
 
     res.json({
       success: true,
@@ -633,17 +628,17 @@ exports.ssoVerify = async (req, res) => {
           id: user.id,
           username: user.username,
           full_name: user.full_name || user.club_name,
-          role_id: data.role_id,
-          role: data.role,
-          user_type: data.user_type,
+          role_id: pusatRole.role_id,
+          role: pusatRole.role,
+          user_type: pusatRole.user_type,
           province_id: user.province_id,
         },
-        redirectPath: data.redirectPath,
+        redirectPath,
       }
     });
   } catch (error) {
-    console.error('[SSO Verify] Error:', error);
-    res.status(500).json({ success: false, message: 'Gagal verifikasi SSO token.' });
+    console.error('[SSO Login] Error:', error);
+    res.status(500).json({ success: false, message: 'Gagal proses SSO login.' });
   }
 };
 
