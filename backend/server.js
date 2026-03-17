@@ -78,6 +78,14 @@ const authLimiter = rateLimit({
 });
 app.use('/api/auth/login', authLimiter);
 
+// Regional login has separate higher limit (for subdomain logins)
+const regionalAuthLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 100,
+  message: { success: false, message: 'Terlalu banyak percobaan login regional, coba lagi nanti.' }
+});
+app.use('/api/auth/login-regional', regionalAuthLimiter);
+
 // Body parsing
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
