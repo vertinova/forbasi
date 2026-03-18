@@ -7,10 +7,9 @@ import ConfirmModal from '../../components/common/ConfirmModal';
 const JABAR_BASE = 'https://jabar.forbasi.or.id';
 const fileUrl = (p) => {
   if (!p) return null;
-  // If already absolute URL, return as-is
   if (p.startsWith('http://') || p.startsWith('https://')) return p;
-  // Otherwise, prepend Jabar's base URL
-  return `${JABAR_BASE}/uploads/${p.replace(/^\/+/, '')}`;
+  // Jabar paths already include /uploads/, just prepend base URL
+  return `${JABAR_BASE}${p.startsWith('/') ? '' : '/'}${p}`;
 };
 
 const TABS = [
@@ -134,7 +133,7 @@ export default function ManageRegionalLanding({ embedded }) {
 
   /* ── ENDPOINT MAP ── */
   const endpointMap = { hero: 'hero-slides', berita: 'berita', struktur: 'struktur', feedback: 'feedback' };
-  const fileFieldMap = { hero: 'image', berita: 'gambar', struktur: 'foto', feedback: 'foto' };
+  const fileFieldMap = { hero: 'gambar', berita: 'gambar', struktur: 'foto', feedback: 'foto' };
 
   /* ── Save (create / update) ── */
   const handleSave = async () => {
@@ -769,6 +768,7 @@ export default function ManageRegionalLanding({ embedded }) {
       {/* Delete modal */}
       {deleteConfirm.show && (
         <ConfirmModal
+          show={deleteConfirm.show}
           title="Hapus Data?"
           message={`"${deleteConfirm.name}" akan dihapus permanen.`}
           onConfirm={handleDelete}

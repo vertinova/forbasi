@@ -93,17 +93,49 @@ function handleError(res, err, action) {
 /* ══════════════════════════════════════════════════════════════════════════
    HERO SLIDES
    ══════════════════════════════════════════════════════════════════════════ */
+// Wrap Jabar response: Jabar returns array directly, frontend expects { success, data }
+function wrapResponse(jabarData, transformer) {
+  let data;
+  let message;
+  if (jabarData && jabarData.success !== undefined) {
+    data = jabarData.data || jabarData;
+    message = jabarData.message;
+  } else if (jabarData && jabarData.message && !Array.isArray(jabarData)) {
+    message = jabarData.message;
+    data = jabarData;
+  } else {
+    data = jabarData;
+  }
+  if (transformer) {
+    data = Array.isArray(data) ? data.map(transformer) : transformer(data);
+  }
+  const result = { success: true, data };
+  if (message) result.message = message;
+  return result;
+}
+
+// Map Jabar hero slide fields to frontend expected fields
+function mapHeroSlide(item) {
+  if (!item) return item;
+  return {
+    ...item,
+    image_path: item.gambar || item.image_path,
+    title: item.caption || item.title || '',
+    subtitle: item.subtitle || '',
+  };
+}
+
 exports.getHeroSlides = async (req, res) => {
   try {
     const response = await forwardJson(req, '/api/external/landing/hero-slides');
-    res.json(response.data);
+    res.json(wrapResponse(response.data, mapHeroSlide));
   } catch (err) { handleError(res, err, 'mengambil hero slides'); }
 };
 
 exports.createHeroSlide = async (req, res) => {
   try {
     const response = await forwardMultipart(req, '/api/external/landing/hero-slides', 'post');
-    res.json(response.data);
+    res.json(wrapResponse(response.data));
   } catch (err) { handleError(res, err, 'menambahkan hero slide'); }
 };
 
@@ -111,7 +143,7 @@ exports.updateHeroSlide = async (req, res) => {
   try {
     const { id } = req.params;
     const response = await forwardMultipart(req, `/api/external/landing/hero-slides/${id}`, 'put');
-    res.json(response.data);
+    res.json(wrapResponse(response.data));
   } catch (err) { handleError(res, err, 'memperbarui hero slide'); }
 };
 
@@ -119,7 +151,7 @@ exports.deleteHeroSlide = async (req, res) => {
   try {
     const { id } = req.params;
     const response = await forwardJson(req, `/api/external/landing/hero-slides/${id}`, 'delete');
-    res.json(response.data);
+    res.json(wrapResponse(response.data));
   } catch (err) { handleError(res, err, 'menghapus hero slide'); }
 };
 
@@ -129,7 +161,7 @@ exports.deleteHeroSlide = async (req, res) => {
 exports.getBerita = async (req, res) => {
   try {
     const response = await forwardJson(req, '/api/external/landing/berita');
-    res.json(response.data);
+    res.json(wrapResponse(response.data));
   } catch (err) { handleError(res, err, 'mengambil berita'); }
 };
 
@@ -137,14 +169,14 @@ exports.getBeritaById = async (req, res) => {
   try {
     const { id } = req.params;
     const response = await forwardJson(req, `/api/external/landing/berita/${id}`);
-    res.json(response.data);
+    res.json(wrapResponse(response.data));
   } catch (err) { handleError(res, err, 'mengambil detail berita'); }
 };
 
 exports.createBerita = async (req, res) => {
   try {
     const response = await forwardMultipart(req, '/api/external/landing/berita', 'post');
-    res.json(response.data);
+    res.json(wrapResponse(response.data));
   } catch (err) { handleError(res, err, 'menambahkan berita'); }
 };
 
@@ -152,7 +184,7 @@ exports.updateBerita = async (req, res) => {
   try {
     const { id } = req.params;
     const response = await forwardMultipart(req, `/api/external/landing/berita/${id}`, 'put');
-    res.json(response.data);
+    res.json(wrapResponse(response.data));
   } catch (err) { handleError(res, err, 'memperbarui berita'); }
 };
 
@@ -160,7 +192,7 @@ exports.deleteBerita = async (req, res) => {
   try {
     const { id } = req.params;
     const response = await forwardJson(req, `/api/external/landing/berita/${id}`, 'delete');
-    res.json(response.data);
+    res.json(wrapResponse(response.data));
   } catch (err) { handleError(res, err, 'menghapus berita'); }
 };
 
@@ -170,14 +202,14 @@ exports.deleteBerita = async (req, res) => {
 exports.getStruktur = async (req, res) => {
   try {
     const response = await forwardJson(req, '/api/external/landing/struktur');
-    res.json(response.data);
+    res.json(wrapResponse(response.data));
   } catch (err) { handleError(res, err, 'mengambil struktur'); }
 };
 
 exports.createStruktur = async (req, res) => {
   try {
     const response = await forwardMultipart(req, '/api/external/landing/struktur', 'post');
-    res.json(response.data);
+    res.json(wrapResponse(response.data));
   } catch (err) { handleError(res, err, 'menambahkan struktur'); }
 };
 
@@ -185,7 +217,7 @@ exports.updateStruktur = async (req, res) => {
   try {
     const { id } = req.params;
     const response = await forwardMultipart(req, `/api/external/landing/struktur/${id}`, 'put');
-    res.json(response.data);
+    res.json(wrapResponse(response.data));
   } catch (err) { handleError(res, err, 'memperbarui struktur'); }
 };
 
@@ -193,7 +225,7 @@ exports.deleteStruktur = async (req, res) => {
   try {
     const { id } = req.params;
     const response = await forwardJson(req, `/api/external/landing/struktur/${id}`, 'delete');
-    res.json(response.data);
+    res.json(wrapResponse(response.data));
   } catch (err) { handleError(res, err, 'menghapus struktur'); }
 };
 
@@ -203,7 +235,7 @@ exports.deleteStruktur = async (req, res) => {
 exports.getFeedback = async (req, res) => {
   try {
     const response = await forwardJson(req, '/api/external/landing/feedback');
-    res.json(response.data);
+    res.json(wrapResponse(response.data));
   } catch (err) { handleError(res, err, 'mengambil feedback'); }
 };
 
@@ -211,7 +243,7 @@ exports.markFeedbackRead = async (req, res) => {
   try {
     const { id } = req.params;
     const response = await forwardJson(req, `/api/external/landing/feedback/${id}/read`, 'put');
-    res.json(response.data);
+    res.json(wrapResponse(response.data));
   } catch (err) { handleError(res, err, 'menandai feedback dibaca'); }
 };
 
@@ -219,7 +251,7 @@ exports.deleteFeedback = async (req, res) => {
   try {
     const { id } = req.params;
     const response = await forwardJson(req, `/api/external/landing/feedback/${id}`, 'delete');
-    res.json(response.data);
+    res.json(wrapResponse(response.data));
   } catch (err) { handleError(res, err, 'menghapus feedback'); }
 };
 
@@ -229,14 +261,14 @@ exports.deleteFeedback = async (req, res) => {
 exports.getSiteConfig = async (req, res) => {
   try {
     const response = await forwardJson(req, '/api/external/landing/config');
-    res.json(response.data);
+    res.json(wrapResponse(response.data));
   } catch (err) { handleError(res, err, 'mengambil konfigurasi'); }
 };
 
 exports.updateSiteConfig = async (req, res) => {
   try {
     const response = await forwardJson(req, '/api/external/landing/config', 'put');
-    res.json(response.data);
+    res.json(wrapResponse(response.data));
   } catch (err) { handleError(res, err, 'memperbarui konfigurasi'); }
 };
 

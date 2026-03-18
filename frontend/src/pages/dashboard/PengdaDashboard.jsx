@@ -521,7 +521,7 @@ export default function PengdaDashboard() {
       subtitle={user?.province_name || undefined}
     >
       {/* Stats */}
-      {stats && (
+      {stats && activeTab === 'kta' && (
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
           {[
             { label: 'Total', value: stats.total || 0, from: 'from-blue-500', to: 'to-blue-600', shadow: 'shadow-blue-500/25', icon: 'fa-file-alt' },

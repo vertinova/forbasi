@@ -70,6 +70,7 @@ export default function PengcabDashboard() {
   const [confirm, setConfirm] = useState({ show: false, id: null, status: '', title: '', message: '' });
   const [confirmReason, setConfirmReason] = useState('');
   const [selectedAppId, setSelectedAppId] = useState(null);
+  const [ktaPagination, setKtaPagination] = useState({ page: 1, totalPages: 1 });
   const [docPreview, setDocPreview] = useState({ show: false, url: '', title: '' });
 
   // Members state
@@ -110,14 +111,15 @@ export default function PengcabDashboard() {
   useEffect(() => { if (activeTab === 'kejurcab') fetchMyKejurcabs(); }, [activeTab]);
   useEffect(() => { if (activeTab === 'review_event') fetchPendingEvents(); }, [activeTab]);
 
-  const fetchData = async () => {
+  const fetchData = async (page = 1) => {
     setLoading(true);
     try {
       const [appsRes, statsRes] = await Promise.all([
-        api.get('/kta/applications', { params: { search, status: filterStatus } }),
+        api.get('/kta/applications', { params: { search, status: filterStatus, page, limit: 10 } }),
         api.get('/kta/stats')
       ]);
       setApplications(appsRes.data.data.applications || []);
+      setKtaPagination(appsRes.data.data.pagination || { page: 1, totalPages: 1 });
       setStats(statsRes.data.data);
     } catch { toast.error('Gagal memuat data'); } finally { setLoading(false); }
   };
@@ -326,7 +328,7 @@ export default function PengcabDashboard() {
               <tbody className="divide-y divide-white/[0.04]">
                 {applications.map((app, idx) => (
                   <tr key={app.id} className="hover:bg-white/[0.03] transition-colors">
-                    <td className="px-4 py-3 text-gray-500 text-xs">{idx + 1}</td>
+                    <td className="px-4 py-3 text-gray-500 text-xs">{(ktaPagination.page - 1) * 10 + idx + 1}</td>
                     <td className="px-4 py-3">
                       <div className="font-medium text-sm text-white">{app.club_name}</div>
                       <div className="text-xs text-gray-500">@{app.username}</div>
@@ -382,6 +384,23 @@ export default function PengcabDashboard() {
               </tbody>
             </table>
           </div>
+          {ktaPagination.totalPages > 1 && (
+            <div className="flex items-center justify-between px-5 py-3.5 border-t border-white/[0.06]">
+              <span className="text-xs text-gray-500">
+                Hal. <span className="text-gray-300 font-semibold">{ktaPagination.page}</span> / <span className="text-gray-300 font-semibold">{ktaPagination.totalPages}</span>
+              </span>
+              <div className="flex gap-1">
+                <button disabled={ktaPagination.page <= 1} onClick={() => fetchData(ktaPagination.page - 1)}
+                  className="w-8 h-8 flex items-center justify-center rounded-lg bg-white/[0.05] border border-white/[0.08] text-gray-400 hover:bg-white/[0.08] hover:text-white disabled:opacity-25 disabled:cursor-not-allowed transition-all">
+                  <i className="fas fa-chevron-left text-[10px]" />
+                </button>
+                <button disabled={ktaPagination.page >= ktaPagination.totalPages} onClick={() => fetchData(ktaPagination.page + 1)}
+                  className="w-8 h-8 flex items-center justify-center rounded-lg bg-white/[0.05] border border-white/[0.08] text-gray-400 hover:bg-white/[0.08] hover:text-white disabled:opacity-25 disabled:cursor-not-allowed transition-all">
+                  <i className="fas fa-chevron-right text-[10px]" />
+                </button>
+              </div>
+            </div>
+          )}
         )}
       </div>
     </>

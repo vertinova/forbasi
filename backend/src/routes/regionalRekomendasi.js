@@ -35,6 +35,11 @@ const upload = multer({ storage: tempStorage, fileFilter, limits: { fileSize: 5 
 // Pengda = role_id 3
 const auth = [authenticate, authorize(3)];
 
+// Surat Config (must be before /:id routes)
+router.get('/surat-config',            auth, ctrl.getSuratConfig);
+router.post('/surat-config/signature', auth, ctrl.saveSignature);
+router.post('/surat-config/stamp',     auth, upload.single('stamp'), ctrl.saveStamp);
+
 // List & CRUD
 router.get   ('/',    auth, ctrl.getRekomendasi);
 router.get   ('/:id', auth, ctrl.getRekomendasiById);
@@ -48,8 +53,9 @@ router.put   ('/:id', auth, upload.fields([
 ]), ctrl.updateRekomendasi);
 router.delete('/:id', auth, ctrl.deleteRekomendasi);
 
-// Approve / Reject
+// Approve / Reject / Regenerate
 router.put('/:id/approve', auth, ctrl.approveRekomendasi);
 router.put('/:id/reject',  auth, ctrl.rejectRekomendasi);
+router.post('/:id/regenerate-surat', auth, ctrl.regenerateSurat);
 
 module.exports = router;
