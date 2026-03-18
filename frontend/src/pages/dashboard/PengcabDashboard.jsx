@@ -316,6 +316,7 @@ export default function PengcabDashboard() {
             <p className="text-sm text-gray-500 m-0">Tidak ada pengajuan</p>
           </div>
         ) : (
+          <>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
@@ -401,6 +402,7 @@ export default function PengcabDashboard() {
               </div>
             </div>
           )}
+          </>
         )}
       </div>
     </>
