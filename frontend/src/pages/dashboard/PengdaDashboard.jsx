@@ -50,7 +50,8 @@ export default function PengdaDashboard() {
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
-  const [filterStatus, setFilterStatus] = useState('');
+  const [filterStatus, setFilterStatus] = useState('approved_pengcab');
+  const [ktaPagination, setKtaPagination] = useState({ page: 1, totalPages: 1 });
   const [confirm, setConfirm] = useState({ show: false });
   const [confirmReason, setConfirmReason] = useState('');
   const [selectedAppId, setSelectedAppId] = useState(null);
@@ -116,17 +117,25 @@ export default function PengdaDashboard() {
   useEffect(() => { if (activeTab === 'dashboard') fetchMemberStats(); }, [activeTab]);
   useEffect(() => { if (activeTab === 'balance') { fetchBalance(); fetchTransactions(); } }, [activeTab]);
 
-  const fetchData = async () => {
+  const fetchData = async (page = 1) => {
     setLoading(true);
     try {
       const [appsRes, statsRes] = await Promise.all([
-        api.get('/kta/applications', { params: { search, status: filterStatus } }),
+        api.get('/kta/applications', { params: { search, status: filterStatus, page, limit: 10 } }),
         api.get('/kta/stats')
       ]);
       setApplications(appsRes.data.data.applications || []);
+      setKtaPagination(appsRes.data.data.pagination || { page: 1, totalPages: 1 });
       setStats(statsRes.data.data);
     } catch { toast.error('Gagal memuat data'); } finally { setLoading(false); }
   };
+
+  // Realtime filter - auto-fetch when filterStatus or search changes
+  useEffect(() => {
+    if (activeTab === 'kta') {
+      fetchData(1);
+    }
+  }, [activeTab, filterStatus, search]);
 
   const fetchCities = async () => {
     try {
@@ -201,7 +210,7 @@ export default function PengdaDashboard() {
     <>
       {/* Filters */}
       <div className="bg-[#141620] rounded-2xl border border-white/[0.06] p-4 mb-5">
-        <form onSubmit={e => { e.preventDefault(); fetchData(); }} className="flex flex-wrap gap-3 items-end">
+        <div className="flex flex-wrap gap-3 items-end">
           <div className="flex-1 min-w-36">
             <label className="block text-[11px] font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Status</label>
             <CustomSelect
@@ -225,15 +234,12 @@ export default function PengdaDashboard() {
               value={search} onChange={e => setSearch(e.target.value)} />
           </div>
           <div className="flex gap-2">
-            <button type="submit" className="px-4 py-2.5 bg-gradient-to-br from-emerald-500 to-emerald-600 text-white text-xs font-semibold rounded-xl shadow-md shadow-emerald-500/25 hover:from-emerald-400 hover:to-emerald-500 transition-all">
-              <i className="fas fa-search mr-1.5" />Filter
-            </button>
-            <button type="button" onClick={() => { setSearch(''); setFilterStatus(''); }}
+            <button type="button" onClick={() => { setSearch(''); setFilterStatus('approved_pengcab'); }}
               className="px-4 py-2.5 bg-white/[0.05] border border-white/[0.08] text-gray-400 text-xs font-medium rounded-xl hover:bg-white/[0.08] hover:text-white transition-all">
               Reset
             </button>
           </div>
-        </form>
+        </div>
       </div>
 
       {/* Table */}
@@ -245,7 +251,7 @@ export default function PengdaDashboard() {
             </div>
             <div>
               <h2 className="m-0 text-[14px] font-bold text-white">Pengajuan KTA Wilayah</h2>
-              <p className="m-0 text-[11px] text-gray-500">{applications.length} pengajuan</p>
+              <p className="m-0 text-[11px] text-gray-500">{ktaPagination.totalPages > 1 ? `${(ktaPagination.page - 1) * 10 + 1}-${Math.min(ktaPagination.page * 10, ktaPagination.totalPages * 10)} dari ${ktaPagination.totalPages * 10}` : `${applications.length} pengajuan`}</p>
             </div>
           </div>
         </div>
@@ -358,6 +364,24 @@ export default function PengdaDashboard() {
                 ))}
               </tbody>
             </table>
+          </div>
+        )}
+        {/* Pagination */}
+        {ktaPagination.totalPages > 1 && (
+          <div className="px-5 py-3 border-t border-white/[0.06] flex justify-between items-center">
+            <button
+              onClick={() => fetchData(ktaPagination.page - 1)}
+              disabled={ktaPagination.page <= 1}
+              className="px-3 py-1.5 bg-white/[0.05] text-gray-400 text-xs rounded-lg disabled:opacity-30 hover:bg-white/[0.1] transition-colors">
+              <i className="fas fa-chevron-left mr-1" />Prev
+            </button>
+            <span className="text-xs text-gray-500">Halaman {ktaPagination.page} dari {ktaPagination.totalPages}</span>
+            <button
+              onClick={() => fetchData(ktaPagination.page + 1)}
+              disabled={ktaPagination.page >= ktaPagination.totalPages}
+              className="px-3 py-1.5 bg-white/[0.05] text-gray-400 text-xs rounded-lg disabled:opacity-30 hover:bg-white/[0.1] transition-colors">
+              Next<i className="fas fa-chevron-right ml-1" />
+            </button>
           </div>
         )}
       </div>

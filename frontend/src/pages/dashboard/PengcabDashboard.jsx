@@ -66,7 +66,7 @@ export default function PengcabDashboard() {
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
-  const [filterStatus, setFilterStatus] = useState('');
+  const [filterStatus, setFilterStatus] = useState('pending');
   const [confirm, setConfirm] = useState({ show: false, id: null, status: '', title: '', message: '' });
   const [confirmReason, setConfirmReason] = useState('');
   const [selectedAppId, setSelectedAppId] = useState(null);
@@ -110,6 +110,13 @@ export default function PengcabDashboard() {
   useEffect(() => { if (activeTab === 'balance') { fetchBalance(); fetchTransactions(); fetchPengdaBankInfo(); } }, [activeTab]);
   useEffect(() => { if (activeTab === 'kejurcab') fetchMyKejurcabs(); }, [activeTab]);
   useEffect(() => { if (activeTab === 'review_event') fetchPendingEvents(); }, [activeTab]);
+
+  // Realtime filter - auto-fetch when filterStatus or search changes
+  useEffect(() => {
+    if (activeTab === 'kta') {
+      fetchData(1);
+    }
+  }, [activeTab, filterStatus, search]);
 
   const fetchData = async (page = 1) => {
     setLoading(true);
@@ -394,7 +401,7 @@ export default function PengcabDashboard() {
     <>
       {/* Filters */}
       <div className="bg-[#141620] rounded-2xl border border-white/[0.06] p-4 mb-5">
-        <form onSubmit={handleFilter} className="flex flex-wrap gap-3 items-end">
+        <div className="flex flex-wrap gap-3 items-end">
           <div className="flex-1 min-w-36">
             <label className="block text-[11px] font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Status</label>
             <CustomSelect
@@ -418,15 +425,12 @@ export default function PengcabDashboard() {
               value={search} onChange={e => setSearch(e.target.value)} />
           </div>
           <div className="flex gap-2">
-            <button type="submit" className="px-4 py-2.5 bg-gradient-to-br from-emerald-500 to-emerald-600 text-white text-xs font-semibold rounded-xl shadow-md shadow-emerald-500/25 hover:from-emerald-400 hover:to-emerald-500 transition-all">
-              <i className="fas fa-search mr-1.5" />Filter
-            </button>
-            <button type="button" onClick={() => { setSearch(''); setFilterStatus(''); }}
+            <button type="button" onClick={() => { setSearch(''); setFilterStatus('pending'); }}
               className="px-4 py-2.5 bg-white/[0.05] border border-white/[0.08] text-gray-400 text-xs font-medium rounded-xl hover:bg-white/[0.08] hover:text-white transition-all">
               Reset
             </button>
           </div>
-        </form>
+        </div>
       </div>
 
       {/* KTA Table */}
@@ -438,7 +442,7 @@ export default function PengcabDashboard() {
             </div>
             <div>
               <h2 className="m-0 text-[14px] font-bold text-white">Daftar Pengajuan KTA</h2>
-              <p className="m-0 text-[11px] text-gray-500">{applications.length} pengajuan</p>
+              <p className="m-0 text-[11px] text-gray-500">{ktaPagination.totalPages > 1 ? `Halaman ${ktaPagination.page} dari ${ktaPagination.totalPages}` : `${applications.length} pengajuan`}</p>
             </div>
           </div>
         </div>
