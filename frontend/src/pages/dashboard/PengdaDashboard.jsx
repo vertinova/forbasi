@@ -338,7 +338,8 @@ export default function PengdaDashboard() {
             <label className="block text-[11px] font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Status KTA</label>
             <select className={SEL} value={memberKtaFilter} onChange={e => setMemberKtaFilter(e.target.value)}>
               <option value="all">Semua Status</option>
-              <option value="issued">KTA Terbit</option>
+              <option value="issued">KTA Aktif</option>
+              <option value="expired">KTA Expired</option>
               <option value="not_issued">Belum Diterbitkan</option>
               <option value="not_applied">Belum Mengajukan</option>
             </select>

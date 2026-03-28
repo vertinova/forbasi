@@ -420,7 +420,8 @@ export default function PengcabDashboard() {
               onChange={v=>setMemberKtaFilter(v)}
               options={[
                 {value:'all',label:'Semua Status'},
-                {value:'issued',label:'KTA Terbit'},
+                {value:'issued',label:'KTA Aktif'},
+                {value:'expired',label:'KTA Expired'},
                 {value:'not_issued',label:'Belum Diterbitkan'},
                 {value:'not_applied',label:'Belum Mengajukan'},
               ]}

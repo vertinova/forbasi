@@ -101,13 +101,27 @@ const User = {
       args.push(term, term, term, term);
     }
 
-    // KTA status filter
+    // KTA status filter - check expiration (KTA valid until Dec 31 of issuance year)
     if (filters.kta_status === 'issued') {
+      // Active KTA: issued AND (same year OR not yet past Dec 31 of that year)
       conds.push("latest_kta.status = 'kta_issued'");
+      conds.push(`(
+        (YEAR(latest_kta.kta_issued_at) = YEAR(NOW()) AND MONTH(NOW()) <= 12)
+        OR (YEAR(latest_kta.kta_issued_at) < YEAR(NOW()) AND DATE(CONCAT(YEAR(latest_kta.kta_issued_at), '-12-31')) >= CURDATE())
+      )`);
     } else if (filters.kta_status === 'not_issued') {
-      conds.push("(latest_kta.status IS NULL OR latest_kta.status != 'kta_issued')");
+      conds.push(`(latest_kta.status IS NULL OR (
+        latest_kta.status = 'kta_issued' AND NOT (
+          (YEAR(latest_kta.kta_issued_at) = YEAR(NOW()) AND MONTH(NOW()) <= 12)
+          OR (YEAR(latest_kta.kta_issued_at) < YEAR(NOW()) AND DATE(CONCAT(YEAR(latest_kta.kta_issued_at), '-12-31')) >= CURDATE())
+        )
+      ))`);
     } else if (filters.kta_status === 'not_applied') {
       conds.push('latest_kta.status IS NULL');
+    } else if (filters.kta_status === 'expired') {
+      // KTA expired: issued but past Dec 31 of issuance year
+      conds.push("latest_kta.status = 'kta_issued'");
+      conds.push(`DATE(CONCAT(YEAR(latest_kta.kta_issued_at), '-12-31')) < CURDATE()`);
     } else if (filters.kta_status && filters.kta_status !== 'all') {
       conds.push('latest_kta.status = ?');
       args.push(filters.kta_status);
@@ -119,8 +133,11 @@ const User = {
       SELECT u.id, u.club_name, u.username, u.email, u.phone, u.address,
              r.role_name, p.name AS province_name, c.name AS city_name,
              latest_kta.id AS kta_application_id, latest_kta.logo_path,
+             latest_kta.kta_issued_at,
              COALESCE(
                CASE
+                 WHEN latest_kta.status = 'kta_issued' AND latest_kta.kta_issued_at IS NOT NULL AND DATE(CONCAT(YEAR(latest_kta.kta_issued_at), '-12-31')) < CURDATE()
+                   THEN 'KTA Expired'
                  WHEN latest_kta.status = 'kta_issued' THEN 'Diterbitkan PB'
                  WHEN latest_kta.status = 'approved_pb' THEN 'Disetujui PB'
                  WHEN latest_kta.status = 'approved_pengda' THEN 'Disetujui Pengda'
@@ -137,7 +154,7 @@ const User = {
       LEFT JOIN provinces p ON u.province_id = p.id
       LEFT JOIN cities c ON u.city_id = c.id
       LEFT JOIN (
-        SELECT ka.user_id, ka.id, ka.status, ka.logo_path, ka.created_at
+        SELECT ka.user_id, ka.id, ka.status, ka.logo_path, ka.created_at, ka.kta_issued_at
         FROM kta_applications ka
         INNER JOIN (
           SELECT user_id, MAX(created_at) AS max_created_at
@@ -169,13 +186,25 @@ const User = {
       args.push(term, term, term, term);
     }
 
-    // KTA status filter
+    // KTA status filter - check expiration (KTA valid until Dec 31 of issuance year)
     if (filters.kta_status === 'issued') {
       conds.push("latest_kta.status = 'kta_issued'");
+      conds.push(`(
+        (YEAR(latest_kta.kta_issued_at) = YEAR(NOW()) AND MONTH(NOW()) <= 12)
+        OR (YEAR(latest_kta.kta_issued_at) < YEAR(NOW()) AND DATE(CONCAT(YEAR(latest_kta.kta_issued_at), '-12-31')) >= CURDATE())
+      )`);
     } else if (filters.kta_status === 'not_issued') {
-      conds.push("(latest_kta.status IS NULL OR latest_kta.status != 'kta_issued')");
+      conds.push(`(latest_kta.status IS NULL OR (
+        latest_kta.status = 'kta_issued' AND NOT (
+          (YEAR(latest_kta.kta_issued_at) = YEAR(NOW()) AND MONTH(NOW()) <= 12)
+          OR (YEAR(latest_kta.kta_issued_at) < YEAR(NOW()) AND DATE(CONCAT(YEAR(latest_kta.kta_issued_at), '-12-31')) >= CURDATE())
+        )
+      ))`);
     } else if (filters.kta_status === 'not_applied') {
       conds.push('latest_kta.status IS NULL');
+    } else if (filters.kta_status === 'expired') {
+      conds.push("latest_kta.status = 'kta_issued'");
+      conds.push(`DATE(CONCAT(YEAR(latest_kta.kta_issued_at), '-12-31')) < CURDATE()`);
     } else if (filters.kta_status && filters.kta_status !== 'all') {
       conds.push('latest_kta.status = ?');
       args.push(filters.kta_status);
@@ -187,7 +216,7 @@ const User = {
       SELECT COUNT(DISTINCT u.id) AS total
       FROM users u
       LEFT JOIN (
-        SELECT ka.user_id, ka.status
+        SELECT ka.user_id, ka.status, ka.kta_issued_at
         FROM kta_applications ka
         INNER JOIN (
           SELECT user_id, MAX(created_at) AS max_created_at
