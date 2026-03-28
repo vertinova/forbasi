@@ -79,7 +79,7 @@ export default function CustomSelect({
 
       {open && (
         <div className="absolute z-[60] mt-1.5 w-full min-w-[160px] bg-[#1a1b2e] border border-white/[0.1] rounded-xl shadow-2xl shadow-black/40 overflow-hidden animate-in fade-in slide-in-from-top-1 duration-150">
-          <ul className="max-h-40 overflow-y-auto custom-scroll py-1 m-0 list-none p-0">
+          <ul className="max-h-52 overflow-y-auto custom-scroll py-1 m-0 list-none p-0">
             {options.map((opt) => {
               const isActive = String(opt.value) === String(value);
               return (

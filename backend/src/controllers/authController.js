@@ -378,12 +378,13 @@ exports.changePassword = async (req, res) => {
 
 exports.registerUser = async (req, res) => {
   try {
-    const { club_name, username, email, phone, address, password, confirm_password, province_id, city_id } = req.body;
+    const { club_name, username, email, phone, address, password, password_confirmation, confirm_password, province_id, city_id } = req.body;
+    const confirmPwd = password_confirmation || confirm_password;
 
-    if (!club_name || !username || !email || !password || !confirm_password || !province_id || !city_id) {
+    if (!club_name || !username || !email || !password || !confirmPwd || !province_id || !city_id) {
       return res.status(400).json({ success: false, message: 'Semua field wajib diisi' });
     }
-    if (password !== confirm_password) {
+    if (password !== confirmPwd) {
       return res.status(400).json({ success: false, message: 'Password dan konfirmasi tidak cocok' });
     }
     if (password.length < 6) {
@@ -402,7 +403,9 @@ exports.registerUser = async (req, res) => {
     const hashedPassword = await bcrypt.hash(password, 12);
     const userId = await User.create({
       club_name, username, email, phone: phone || null, address: address || null,
-      password: hashedPassword, role_id: 1, province_id, city_id
+      password: hashedPassword, role_id: 1,
+      province_id: province_id ? parseInt(province_id, 10) : null,
+      city_id: city_id ? parseInt(city_id, 10) : null
     });
 
     return res.status(201).json({ success: true, message: 'Pendaftaran berhasil! Silakan login.', data: { id: userId } });

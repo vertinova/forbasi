@@ -16,6 +16,7 @@ router.delete('/:id', authenticate, authorize(4), userController.deleteUser);
 
 // Members with KTA status (for Pengda/Pengcab dashboards)
 router.get('/members-with-kta', authenticate, authorize(2, 3), userController.getMembersWithKtaStatus);
+router.get('/export-members-kta', authenticate, authorize(2, 3), userController.exportMembersWithKta);
 router.get('/issued-kta-members', authenticate, authorize(2, 3), userController.getIssuedKtaMembers);
 router.get('/my-province-cities', authenticate, authorize(3), userController.getCitiesInProvince);
 

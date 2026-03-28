@@ -60,10 +60,50 @@ export default function PengdaDashboard() {
   const [members, setMembers] = useState([]);
   const [membersLoading, setMembersLoading] = useState(false);
   const [memberSearch, setMemberSearch] = useState('');
-  const [memberKtaFilter, setMemberKtaFilter] = useState('all');
+  const [memberKtaFilter, setMemberKtaFilter] = useState('issued');
   const [memberCityFilter, setMemberCityFilter] = useState('');
   const [cities, setCities] = useState([]);
   const [membersPagination, setMembersPagination] = useState({ page: 1, totalPages: 1 });
+  const [exporting, setExporting] = useState(false);
+  const [memberStats, setMemberStats] = useState(null);
+
+  // Fetch member stats for dashboard
+  const fetchMemberStats = async () => {
+    try {
+      const [issuedRes, expiredRes, pendingRes] = await Promise.all([
+        api.get('/users/members-with-kta', { params: { kta_status: 'issued', limit: 1 } }),
+        api.get('/users/members-with-kta', { params: { kta_status: 'expired', limit: 1 } }),
+        api.get('/users/members-with-kta', { params: { kta_status: 'not_issued', limit: 1 } }),
+      ]);
+      setMemberStats({
+        issued: issuedRes.data.data.pagination?.total || 0,
+        expired: expiredRes.data.data.pagination?.total || 0,
+        pending: pendingRes.data.data.pagination?.total || 0,
+      });
+    } catch { /* ignore */ }
+  };
+
+  // Export members to Excel
+  const handleExportMembers = async () => {
+    setExporting(true);
+    try {
+      const params = {};
+      if (memberSearch) params.search = memberSearch;
+      if (memberKtaFilter) params.kta_status = memberKtaFilter;
+      if (memberCityFilter) params.city_id = memberCityFilter;
+      const res = await api.get('/users/export-members-kta', { params, responseType: 'blob' });
+      const url = window.URL.createObjectURL(new Blob([res.data]));
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `Data_Anggota_KTA_${new Date().toISOString().slice(0, 10)}.xlsx`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+      toast.success('Export berhasil');
+    } catch { toast.error('Gagal export data'); }
+    finally { setExporting(false); }
+  };
 
   // Balance state
   const [balanceSummary, setBalanceSummary] = useState(null);
@@ -71,8 +111,9 @@ export default function PengdaDashboard() {
   const [transactionsLoading, setTransactionsLoading] = useState(false);
   const [transactionsPagination, setTransactionsPagination] = useState({ page: 1, totalPages: 1 });
 
-  useEffect(() => { fetchData(); fetchCities(); }, []);
+  useEffect(() => { fetchData(); fetchCities(); fetchMemberStats(); }, []);
   useEffect(() => { if (activeTab === 'members') fetchMembers(); }, [activeTab, memberSearch, memberKtaFilter, memberCityFilter]);
+  useEffect(() => { if (activeTab === 'dashboard') fetchMemberStats(); }, [activeTab]);
   useEffect(() => { if (activeTab === 'balance') { fetchBalance(); fetchTransactions(); } }, [activeTab]);
 
   const fetchData = async () => {
@@ -143,6 +184,7 @@ export default function PengdaDashboard() {
   const isJabar = user?.province_id === 12;
 
   const menuItems = [
+    { icon: <i className="fas fa-tachometer-alt" />, label: 'Dashboard', onClick: () => setActiveTab('dashboard'), active: activeTab === 'dashboard' },
     { icon: <i className="fas fa-file-invoice" />, label: 'Pengajuan KTA', onClick: () => setActiveTab('kta'), active: activeTab === 'kta' },
     { icon: <i className="fas fa-users" />, label: 'Daftar Anggota', onClick: () => setActiveTab('members'), active: activeTab === 'members' },
     { icon: <i className="fas fa-wallet" />, label: 'Saldo dari PB', onClick: () => setActiveTab('balance'), active: activeTab === 'balance' },
@@ -349,7 +391,7 @@ export default function PengdaDashboard() {
             <input type="text" placeholder="Nama klub/email..." className={INPUT}
               value={memberSearch} onChange={e => setMemberSearch(e.target.value)} />
           </div>
-          <button onClick={() => { setMemberSearch(''); setMemberKtaFilter('all'); setMemberCityFilter(''); }}
+          <button onClick={() => { setMemberSearch(''); setMemberKtaFilter('issued'); setMemberCityFilter(''); }}
             className="px-4 py-2.5 bg-white/[0.05] border border-white/[0.08] text-gray-400 text-xs font-medium rounded-xl hover:bg-white/[0.08] hover:text-white transition-all">
             Reset
           </button>
@@ -358,11 +400,20 @@ export default function PengdaDashboard() {
 
       {/* Members Table */}
       <div className="bg-[#141620] rounded-2xl border border-white/[0.06] overflow-hidden">
-        <div className="px-5 py-4 border-b border-white/[0.06] flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-violet-500 to-violet-600 flex items-center justify-center shadow-lg shadow-violet-500/25 flex-shrink-0">
-            <i className="fas fa-users text-white text-sm" />
+        <div className="px-5 py-4 border-b border-white/[0.06] flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-violet-500 to-violet-600 flex items-center justify-center shadow-lg shadow-violet-500/25 flex-shrink-0">
+              <i className="fas fa-users text-white text-sm" />
+            </div>
+            <h2 className="m-0 text-[14px] font-bold text-white">Daftar Anggota Wilayah</h2>
           </div>
-          <h2 className="m-0 text-[14px] font-bold text-white">Daftar Anggota Wilayah</h2>
+          <button
+            onClick={handleExportMembers}
+            disabled={exporting}
+            className="flex items-center gap-2 px-4 py-2 text-xs rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 hover:bg-emerald-500/20 transition-all disabled:opacity-50">
+            <i className={`fas ${exporting ? 'fa-spinner fa-spin' : 'fa-file-excel'}`} />
+            {exporting ? 'Exporting...' : 'Export Excel'}
+          </button>
         </div>
         {membersLoading ? SPINNER : members.length === 0 ? (
           <div className="py-16 text-center">
@@ -425,6 +476,131 @@ export default function PengdaDashboard() {
         )}
       </div>
     </>
+  );
+
+  const renderDashboardSection = () => (
+    <div className="space-y-6">
+      {/* Welcome Hero Banner */}
+      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-teal-600 via-teal-500 to-emerald-500 p-6 md:p-8 shadow-2xl shadow-teal-500/10">
+        <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/2 blur-3xl"/>
+        <div className="absolute bottom-0 left-0 w-48 h-48 bg-teal-400/20 rounded-full translate-y-1/2 -translate-x-1/2 blur-2xl"/>
+        <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+          <div>
+            <div className="flex items-center gap-2 mb-2">
+              <span className="px-3 py-1 text-[10px] font-bold uppercase tracking-widest bg-white/20 text-white rounded-full backdrop-blur-sm">
+                <i className="fas fa-map-marker-alt mr-1.5"/>Pengda Dashboard
+              </span>
+            </div>
+            <h1 className="text-2xl md:text-3xl font-black text-white mb-1 tracking-tight">
+              Selamat Datang! 👋
+            </h1>
+            <p className="text-teal-100 text-sm md:text-base max-w-md">
+              Kelola anggota, pantau KTA, dan atur organisasi daerah dengan mudah
+            </p>
+          </div>
+          <div className="flex items-center gap-3">
+            <div className="text-right hidden sm:block">
+              <p className="text-white/70 text-[11px] uppercase tracking-widest mb-1">Hari Ini</p>
+              <p className="text-white font-bold text-lg">{new Date().toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'short' })}</p>
+            </div>
+            <div className="w-14 h-14 rounded-2xl bg-white/20 backdrop-blur-sm flex items-center justify-center border border-white/20">
+              <i className="fas fa-calendar-alt text-white text-xl"/>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Stats Grid */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-4">
+        {/* KTA Stats from API */}
+        {stats && (
+          <>
+            <div className="bg-[#141620] border border-white/[0.06] rounded-2xl p-4 flex items-center gap-3 hover:-translate-y-1 transition-all duration-200">
+              <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center shadow-lg shadow-emerald-500/25 flex-shrink-0">
+                <i className="fas fa-id-card text-white text-sm"/>
+              </div>
+              <div>
+                <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest mb-0.5">KTA Terbit</p>
+                <p className="font-bold text-white text-xl">{stats.kta_issued || 0}</p>
+              </div>
+            </div>
+            <div className="bg-[#141620] border border-white/[0.06] rounded-2xl p-4 flex items-center gap-3 hover:-translate-y-1 transition-all duration-200">
+              <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-amber-500 to-amber-600 flex items-center justify-center shadow-lg shadow-amber-500/25 flex-shrink-0">
+                <i className="fas fa-hourglass-half text-white text-sm"/>
+              </div>
+              <div>
+                <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest mb-0.5">Menunggu Review</p>
+                <p className="font-bold text-white text-xl">{stats.pending || 0}</p>
+              </div>
+            </div>
+          </>
+        )}
+        {/* Member Stats */}
+        {memberStats && (
+          <>
+            <div className="bg-[#141620] border border-white/[0.06] rounded-2xl p-4 flex items-center gap-3 hover:-translate-y-1 transition-all duration-200">
+              <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-green-500 to-green-600 flex items-center justify-center shadow-lg shadow-green-500/25 flex-shrink-0">
+                <i className="fas fa-check-circle text-white text-sm"/>
+              </div>
+              <div>
+                <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest mb-0.5">KTA Aktif</p>
+                <p className="font-bold text-white text-xl">{memberStats.issued}</p>
+              </div>
+            </div>
+            <div className="bg-[#141620] border border-white/[0.06] rounded-2xl p-4 flex items-center gap-3 hover:-translate-y-1 transition-all duration-200">
+              <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-orange-500 to-orange-600 flex items-center justify-center shadow-lg shadow-orange-500/25 flex-shrink-0">
+                <i className="fas fa-exclamation-circle text-white text-sm"/>
+              </div>
+              <div>
+                <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest mb-0.5">KTA Expired</p>
+                <p className="font-bold text-white text-xl">{memberStats.expired}</p>
+              </div>
+            </div>
+            <div className="bg-[#141620] border border-white/[0.06] rounded-2xl p-4 flex items-center gap-3 hover:-translate-y-1 transition-all duration-200">
+              <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-gray-500 to-gray-600 flex items-center justify-center shadow-lg shadow-gray-500/25 flex-shrink-0">
+                <i className="fas fa-clock text-white text-sm"/>
+              </div>
+              <div>
+                <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest mb-0.5">Belum Terbit</p>
+                <p className="font-bold text-white text-xl">{memberStats.pending}</p>
+              </div>
+            </div>
+          </>
+        )}
+      </div>
+
+      {/* Quick Actions */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <button onClick={() => setActiveTab('members')}
+          className="flex items-center gap-3 px-4 py-3 rounded-xl bg-[#141620] border border-white/[0.06] hover:border-emerald-500/30 hover:bg-[#191c28] transition-all text-left">
+          <div className="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center">
+            <i className="fas fa-users text-emerald-400"/>
+          </div>
+          <span className="text-sm font-medium text-gray-300">Daftar Anggota</span>
+        </button>
+        <button onClick={() => setActiveTab('kta')}
+          className="flex items-center gap-3 px-4 py-3 rounded-xl bg-[#141620] border border-white/[0.06] hover:border-blue-500/30 hover:bg-[#191c28] transition-all text-left">
+          <div className="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center">
+            <i className="fas fa-file-alt text-blue-400"/>
+          </div>
+          <span className="text-sm font-medium text-gray-300">Pengajuan KTA</span>
+        </button>
+        <button onClick={() => setActiveTab('balance')}
+          className="flex items-center gap-3 px-4 py-3 rounded-xl bg-[#141620] border border-white/[0.06] hover:border-amber-500/30 hover:bg-[#191c28] transition-all text-left">
+          <div className="w-10 h-10 rounded-xl bg-amber-500/10 flex items-center justify-center">
+            <i className="fas fa-wallet text-amber-400"/>
+          </div>
+          <span className="text-sm font-medium text-gray-300">Saldo dari PB</span>
+        </button>
+        <button onClick={() => setActiveTab('kejurnas')}
+          className="flex items-center gap-3 px-4 py-3 rounded-xl bg-[#141620] border border-white/[0.06] hover:border-violet-500/30 hover:bg-[#191c28] transition-all text-left">
+          <div className="w-10 h-10 rounded-xl bg-violet-500/10 flex items-center justify-center">
+            <i className="fas fa-trophy text-violet-400"/>
+          </div>
+          <span className="text-sm font-medium text-gray-300">Kejurnas</span>
+        </button>
+      </div>
+    </div>
   );
 
   const renderBalanceSection = () => (
@@ -544,6 +720,7 @@ export default function PengdaDashboard() {
       )}
 
       {/* Tab Content */}
+      {activeTab === 'dashboard' && renderDashboardSection()}
       {activeTab === 'kta' && renderKtaSection()}
       {activeTab === 'kta-detail' && selectedAppId && (
         <KtaDetailPanel

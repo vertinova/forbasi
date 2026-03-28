@@ -246,6 +246,9 @@ exports.getMembersWithKtaStatus = async (req, res) => {
     const { role_id, search, kta_status, city_id, page = 1, limit = 10 } = req.query;
     const filters = {};
 
+    // Valid kta_status values
+    const validKtaStatuses = ['all', 'issued', 'expired', 'not_issued', 'not_applied'];
+
     // Auto-filter by region based on user role
     const currentUser = await User.findById(req.user.id);
     if (req.user.role_id === 2) {
@@ -260,7 +263,10 @@ exports.getMembersWithKtaStatus = async (req, res) => {
 
     if (role_id) filters.role_id = parseInt(role_id);
     if (search) filters.search = search;
-    if (kta_status) filters.kta_status = kta_status;
+    // Only apply kta_status if it's a valid value
+    if (kta_status && validKtaStatuses.includes(kta_status)) {
+      filters.kta_status = kta_status;
+    }
 
     const pageNum = parseInt(page) || 1;
     const limitNum = parseInt(limit) || 10;
@@ -286,6 +292,87 @@ exports.getMembersWithKtaStatus = async (req, res) => {
     });
   } catch (err) {
     console.error('Get members with KTA status error:', err);
+    return res.status(500).json({ success: false, message: 'Terjadi kesalahan server' });
+  }
+};
+
+// Export members with KTA status to Excel (for Pengda/Pengcab)
+exports.exportMembersWithKta = async (req, res) => {
+  try {
+    const ExcelJS = require('exceljs');
+    const { search, kta_status, city_id } = req.query;
+    const filters = { limit: 10000, offset: 0 };
+
+    // Valid kta_status values
+    const validKtaStatuses = ['all', 'issued', 'expired', 'not_issued', 'not_applied'];
+
+    // Auto-filter by region based on user role
+    const currentUser = await User.findById(req.user.id);
+    if (req.user.role_id === 2) {
+      filters.city_id = currentUser.city_id;
+    } else if (req.user.role_id === 3) {
+      filters.province_id = currentUser.province_id;
+      if (city_id) filters.city_id = parseInt(city_id);
+    }
+
+    if (search) filters.search = search;
+    // Only apply kta_status if it's a valid value
+    if (kta_status && validKtaStatuses.includes(kta_status)) {
+      filters.kta_status = kta_status;
+    }
+
+    const members = await User.getMembersWithKtaStatus(filters);
+
+    const workbook = new ExcelJS.Workbook();
+    const sheet = workbook.addWorksheet('Data Anggota KTA');
+
+    sheet.columns = [
+      { header: 'No', key: 'no', width: 5 },
+      { header: 'Nama Klub', key: 'club_name', width: 25 },
+      { header: 'Username', key: 'username', width: 20 },
+      { header: 'Email', key: 'email', width: 30 },
+      { header: 'Telepon', key: 'phone', width: 15 },
+      { header: 'Provinsi', key: 'province_name', width: 20 },
+      { header: 'Kota', key: 'city_name', width: 20 },
+      { header: 'Role', key: 'role_name', width: 15 },
+      { header: 'Status KTA', key: 'kta_status_label', width: 20 },
+      { header: 'Tanggal Terbit KTA', key: 'kta_issued_at', width: 20 },
+    ];
+
+    // Header styling
+    sheet.getRow(1).font = { bold: true, color: { argb: 'FFFFFFFF' } };
+    sheet.getRow(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF4CAF50' } };
+    sheet.getRow(1).alignment = { vertical: 'middle', horizontal: 'center' };
+
+    members.forEach((m, idx) => {
+      const issuedAt = m.kta_issued_at ? new Date(m.kta_issued_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }) : '-';
+      sheet.addRow({
+        no: idx + 1,
+        club_name: m.club_name || '-',
+        username: m.username || '-',
+        email: m.email || '-',
+        phone: m.phone || '-',
+        province_name: m.province_name || '-',
+        city_name: m.city_name || '-',
+        role_name: m.role_name || '-',
+        kta_status_label: m.kta_status_label || '-',
+        kta_issued_at: issuedAt,
+      });
+    });
+
+    // Auto size columns - use header length as base
+    sheet.columns.forEach(column => {
+      const headerLength = column.header ? column.header.length : 10;
+      column.width = Math.min(headerLength + 2, 40);
+    });
+
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', `attachment; filename=Data_Anggota_KTA_${new Date().toISOString().slice(0, 10)}.xlsx`);
+
+    await workbook.xlsx.write(res);
+    res.end();
+  } catch (err) {
+    console.error('Export members error:', err);
     return res.status(500).json({ success: false, message: 'Terjadi kesalahan server' });
   }
 };

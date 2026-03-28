@@ -227,11 +227,13 @@ async function setupDatabase() {
         username VARCHAR(100) NOT NULL UNIQUE,
         password VARCHAR(255) NOT NULL,
         full_name VARCHAR(200) DEFAULT NULL,
-        email VARCHAR(150) DEFAULT NULL,
+        email VARCHAR(255) DEFAULT NULL,
         phone VARCHAR(20) DEFAULT NULL,
-        license_type ENUM('pelatih','juri') DEFAULT 'pelatih',
+        role ENUM('pelatih','juri') DEFAULT 'pelatih',
+        is_active TINYINT(1) DEFAULT 1,
         last_login DATETIME DEFAULT NULL,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
       ) ENGINE=InnoDB
     `);
 
@@ -253,15 +255,33 @@ async function setupDatabase() {
       CREATE TABLE IF NOT EXISTS license_applications (
         id INT PRIMARY KEY AUTO_INCREMENT,
         user_id INT NOT NULL,
-        event_id INT DEFAULT NULL,
-        license_type ENUM('pelatih','juri') DEFAULT 'pelatih',
-        status ENUM('pending','approved','rejected') DEFAULT 'pending',
-        document_path VARCHAR(500) DEFAULT NULL,
+        nama_lengkap VARCHAR(255) DEFAULT NULL,
+        alamat TEXT DEFAULT NULL,
+        jenis_lisensi ENUM('pelatih','juri_muda','juri_madya') NOT NULL,
+        akomodasi ENUM('tanpa_kamar','dengan_kamar') DEFAULT 'tanpa_kamar',
+        no_telepon VARCHAR(20) DEFAULT NULL,
+        email VARCHAR(255) DEFAULT NULL,
+        pas_foto VARCHAR(500) DEFAULT NULL,
+        bukti_transfer VARCHAR(500) DEFAULT NULL,
+        surat_rekomendasi_pengda VARCHAR(500) DEFAULT NULL,
+        surat_pengalaman VARCHAR(500) DEFAULT NULL,
+        sertifikat_tot VARCHAR(500) DEFAULT NULL,
+        surat_rekomendasi VARCHAR(500) DEFAULT NULL,
+        qr_code_path VARCHAR(500) DEFAULT NULL,
         notes TEXT DEFAULT NULL,
+        biaya_lisensi DECIMAL(15,2) DEFAULT 0.00,
+        status ENUM('pending','proses','approved','rejected') DEFAULT 'pending',
+        show_on_landing TINYINT(1) NOT NULL DEFAULT 0,
+        alasan_penolakan TEXT DEFAULT NULL,
+        approved_by INT DEFAULT NULL,
+        approved_at TIMESTAMP NULL DEFAULT NULL,
+        submitted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-        FOREIGN KEY (user_id) REFERENCES license_users(id),
-        FOREIGN KEY (event_id) REFERENCES license_events(id) ON DELETE SET NULL
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        CONSTRAINT fk_license_app_user FOREIGN KEY (user_id) REFERENCES license_users(id) ON DELETE CASCADE,
+        INDEX idx_license_app_user (user_id),
+        INDEX idx_license_app_status (status),
+        INDEX idx_license_app_jenis (jenis_lisensi)
       ) ENGINE=InnoDB
     `);
 
