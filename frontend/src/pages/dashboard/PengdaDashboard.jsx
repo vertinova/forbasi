@@ -43,7 +43,7 @@ const SPINNER = <div className="py-16 flex justify-center"><div className="w-8 h
 
 export default function PengdaDashboard() {
   const { user } = useAuth();
-  const [activeTab, setActiveTab] = useState('kta');
+  const [activeTab, setActiveTab] = useState('dashboard');
   
   // KTA Applications state
   const [applications, setApplications] = useState([]);
