@@ -27,7 +27,7 @@ export default function SidebarLayout({ menuItems, title, subtitle, children }) 
 
   const handleLogout = () => { logout(); navigate('/login'); };
 
-  const sidebarW = collapsed ? 76 : 264;
+  const sidebarW = collapsed ? 76 : 220;
   const roleLabel = user?.role_id === 4 ? 'PB' : user?.role_id === 3 ? 'Pengda' : user?.role_id === 2 ? 'Pengcab' : 'Anggota';
 
   return (

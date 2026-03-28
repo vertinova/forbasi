@@ -127,7 +127,13 @@ exports.proxyRequest = async (req, res) => {
       response = await regional.client(axiosConfig);
     }
 
-    res.status(response.status).json(response.data);
+    // Wrap raw Jabar responses into { success, data } format expected by frontend
+    const jabarData = response.data;
+    if (jabarData && typeof jabarData === 'object' && 'success' in jabarData) {
+      res.status(response.status).json(jabarData);
+    } else {
+      res.status(response.status).json({ success: true, data: jabarData });
+    }
   } catch (err) {
     const status = err.response?.status || 500;
     const data = err.response?.data || { success: false, message: err.message };
