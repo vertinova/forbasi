@@ -13,7 +13,14 @@ router.post(
     { name: 'bukti_transfer', maxCount: 1 },
     { name: 'surat_pengalaman', maxCount: 1 },
     { name: 'sertifikat_tot', maxCount: 1 },
-    { name: 'surat_rekomendasi', maxCount: 1 }
+    { name: 'surat_rekomendasi', maxCount: 1 },
+    { name: 'kartu_identitas', maxCount: 1 },
+    { name: 'ijazah', maxCount: 1 },
+    { name: 'surat_kesediaan', maxCount: 1 },
+    { name: 'pakta_integritas', maxCount: 1 },
+    { name: 'surat_keterangan_sehat', maxCount: 1 },
+    { name: 'daftar_riwayat_hidup', maxCount: 1 },
+    { name: 'surat_tugas', maxCount: 1 },
   ]),
   handleUploadError,
   licenseController.submitApplication
@@ -29,7 +36,14 @@ router.post(
     { name: 'bukti_transfer', maxCount: 1 },
     { name: 'surat_pengalaman', maxCount: 1 },
     { name: 'sertifikat_tot', maxCount: 1 },
-    { name: 'surat_rekomendasi', maxCount: 1 }
+    { name: 'surat_rekomendasi', maxCount: 1 },
+    { name: 'kartu_identitas', maxCount: 1 },
+    { name: 'ijazah', maxCount: 1 },
+    { name: 'surat_kesediaan', maxCount: 1 },
+    { name: 'pakta_integritas', maxCount: 1 },
+    { name: 'surat_keterangan_sehat', maxCount: 1 },
+    { name: 'daftar_riwayat_hidup', maxCount: 1 },
+    { name: 'surat_tugas', maxCount: 1 },
   ]),
   handleUploadError,
   licenseController.submitApplication
@@ -42,6 +56,7 @@ router.get('/events', authenticate, licenseController.getEvents);
 router.get('/applications', authenticate, authorize(4), licenseController.getAllApplications);
 router.get('/applications/:id', authenticate, licenseController.getApplicationDetail);
 router.patch('/applications/:id/status', authenticate, authorize(4), licenseController.updateStatus);
+router.patch('/applications/:id/issue', authenticate, authorize(4), licenseController.issueLicense);
 router.patch('/applications/:id/toggle-landing', authenticate, authorize(4), licenseController.toggleShowOnLanding);
 router.get('/stats', authenticate, authorize(4), licenseController.getStats);
 

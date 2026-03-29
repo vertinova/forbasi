@@ -46,7 +46,9 @@ async function setup() {
   await connection.execute(`
     INSERT IGNORE INTO license_configs (jenis_lisensi, nama_kegiatan, tempat, tanggal_mulai, tanggal_selesai, harga_tanpa_kamar, harga_dengan_kamar)
     VALUES 
-      ('pelatih', 'Lisensi Pelatih Forbasi', '', NULL, NULL, 750000, 1000000),
+      ('pelatih_muda', 'Lisensi Pelatih Muda Forbasi', '', NULL, NULL, 750000, 1000000),
+      ('pelatih_madya', 'Lisensi Pelatih Madya Forbasi', '', NULL, NULL, 750000, 1000000),
+      ('pelatih_utama', 'Lisensi Pelatih Utama Forbasi', '', NULL, NULL, 750000, 1000000),
       ('juri_muda', 'Lisensi Juri Muda Forbasi', '', NULL, NULL, 2000000, 2250000),
       ('juri_madya', 'Lisensi Juri Madya Forbasi', '', NULL, NULL, 2000000, 2250000)
   `);

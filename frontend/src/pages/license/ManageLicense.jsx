@@ -4,6 +4,7 @@ import LoadingSpinner from '../../components/common/LoadingSpinner';
 import api from '../../services/api';
 import toast from 'react-hot-toast';
 import DocumentPreviewModal from '../../components/common/DocumentPreviewModal';
+import ConfirmModal from '../../components/common/ConfirmModal';
 
 const API_BASE = (import.meta.env.VITE_API_URL || 'http://localhost:5000/api').replace(/\/api$/, '');
 
@@ -11,25 +12,33 @@ const STATUS = {
   pending:  { label: 'Pending',   bg: 'bg-amber-500/10',   text: 'text-amber-400',   ring: 'ring-amber-500/20',   dot: 'bg-amber-500' },
   proses:   { label: 'Diproses',  bg: 'bg-blue-500/10',    text: 'text-blue-400',    ring: 'ring-blue-500/20',    dot: 'bg-blue-500' },
   approved: { label: 'Approved',  bg: 'bg-emerald-500/10', text: 'text-emerald-400', ring: 'ring-emerald-500/20', dot: 'bg-emerald-500' },
+  issued:   { label: 'Terbit',    bg: 'bg-cyan-500/10',    text: 'text-cyan-400',    ring: 'ring-cyan-500/20',    dot: 'bg-cyan-500' },
   rejected: { label: 'Ditolak',   bg: 'bg-red-500/10',     text: 'text-red-400',     ring: 'ring-red-500/20',     dot: 'bg-red-500' },
 };
 
 const TABS = [
-  { key: 'pelatih',   label: 'Pelatih',    icon: 'fa-bullhorn', color: 'orange', filter: v => v === 'pelatih' },
+  { key: 'pelatih',   label: 'Pelatih',    icon: 'fa-bullhorn', color: 'orange', filter: v => v === 'pelatih' || v?.startsWith('pelatih_') },
   { key: 'juri_muda', label: 'Juri Muda',  icon: 'fa-star',     color: 'violet', filter: v => v === 'juri_muda' },
   { key: 'juri_madya',label: 'Juri Madya',  icon: 'fa-crown',    color: 'purple', filter: v => v === 'juri_madya' },
 ];
 
 const DOC_FIELDS = [
-  { key: 'pas_foto',           label: 'Pas Foto 4x6',              icon: 'fa-user-circle' },
-  { key: 'bukti_transfer',     label: 'Bukti Transfer',             icon: 'fa-receipt' },
-  { key: 'surat_pengalaman',   label: 'Surat Keterangan Pengalaman',icon: 'fa-file-alt' },
-  { key: 'sertifikat_tot',     label: 'Sertifikat ToT',             icon: 'fa-certificate' },
-  { key: 'surat_rekomendasi',  label: 'Surat Rekomendasi Pengda',   icon: 'fa-file-signature' },
+  { key: 'kartu_identitas',       label: 'Kartu Identitas (KTP/SIM/Paspor)', icon: 'fa-id-card' },
+  { key: 'pas_foto',              label: 'Pas Foto 4x6',                     icon: 'fa-user-circle' },
+  { key: 'ijazah',                label: 'Ijazah Pendidikan Tertinggi',       icon: 'fa-graduation-cap' },
+  { key: 'surat_kesediaan',       label: 'Surat Kesediaan Mengikuti Lisensi', icon: 'fa-file-contract' },
+  { key: 'pakta_integritas',      label: 'Pakta Integritas',                  icon: 'fa-handshake' },
+  { key: 'surat_rekomendasi',     label: 'Surat Rekomendasi Pengda',          icon: 'fa-file-signature' },
+  { key: 'surat_keterangan_sehat',label: 'Surat Keterangan Sehat',            icon: 'fa-heartbeat' },
+  { key: 'daftar_riwayat_hidup',  label: 'Daftar Riwayat Hidup',              icon: 'fa-file-alt' },
+  { key: 'surat_pengalaman',      label: 'Sertifikat/Referensi Pengalaman',   icon: 'fa-award' },
+  { key: 'surat_tugas',           label: 'Surat Tugas dari Satuan/Klub',      icon: 'fa-file-signature' },
+  { key: 'sertifikat_tot',        label: 'Sertifikat ToT',                    icon: 'fa-certificate' },
+  { key: 'bukti_transfer',        label: 'Bukti Transfer',                    icon: 'fa-receipt' },
 ];
 
 const formatCurrency = (v) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(v || 0);
-const formatJenis = (v) => ({ pelatih: 'Pelatih', juri_muda: 'Juri Muda', juri_madya: 'Juri Madya' }[v] || v);
+const formatJenis = (v) => ({ pelatih: 'Pelatih', pelatih_muda: 'Pelatih Muda', pelatih_madya: 'Pelatih Madya', pelatih_utama: 'Pelatih Utama', juri_muda: 'Juri Muda', juri_madya: 'Juri Madya' }[v] || v);
 
 export default function ManageLicense({ embedded }) {
   const [viewMode, setViewMode] = useState('applications'); // 'applications' | 'settings'
@@ -41,6 +50,7 @@ export default function ManageLicense({ embedded }) {
   const [activeTab, setActiveTab] = useState('pelatih');
   const [detail, setDetail] = useState(null);
   const [docPreview, setDocPreview] = useState({ show: false, url: '', title: '' });
+  const [rejectModal, setRejectModal] = useState({ show: false, id: null, reason: '' });
   // Settings states
   const [configs, setConfigs] = useState({});
   const [saving, setSaving] = useState(false);
@@ -110,9 +120,27 @@ export default function ManageLicense({ embedded }) {
   };
 
   const handleUpdateStatus = async (id, status) => {
+    if (status === 'rejected') {
+      setRejectModal({ show: true, id, reason: '' });
+      return;
+    }
     try {
       await api.patch(`/license/applications/${id}/status`, { status });
       toast.success('Status berhasil diperbarui');
+      setDetail(null);
+      fetchData();
+    } catch (err) { toast.error(err.response?.data?.message || 'Gagal'); }
+  };
+
+  const handleRejectConfirm = async () => {
+    if (!rejectModal.reason.trim()) {
+      toast.error('Alasan penolakan wajib diisi');
+      return;
+    }
+    try {
+      await api.patch(`/license/applications/${rejectModal.id}/status`, { status: 'rejected', alasan: rejectModal.reason.trim() });
+      toast.success('Status berhasil diperbarui');
+      setRejectModal({ show: false, id: null, reason: '' });
       setDetail(null);
       fetchData();
     } catch (err) { toast.error(err.response?.data?.message || 'Gagal'); }
@@ -125,6 +153,16 @@ export default function ManageLicense({ embedded }) {
       setApplications(prev => prev.map(a => a.id === id ? { ...a, show_on_landing: res.data.data.show_on_landing ? 1 : 0 } : a));
       if (detail?.id === id) setDetail(prev => ({ ...prev, show_on_landing: res.data.data.show_on_landing ? 1 : 0 }));
     } catch (err) { toast.error(err.response?.data?.message || 'Gagal'); }
+  };
+
+  const handleIssueLicense = async (id) => {
+    if (!window.confirm('Terbitkan lisensi ini? Lisensi akan berlaku selama 3 tahun.')) return;
+    try {
+      const res = await api.patch(`/license/applications/${id}/issue`);
+      toast.success(res.data.message || 'Lisensi berhasil diterbitkan');
+      setDetail(null);
+      fetchData();
+    } catch (err) { toast.error(err.response?.data?.message || 'Gagal menerbitkan lisensi'); }
   };
 
   const currentTab = TABS.find(t => t.key === activeTab);
@@ -165,7 +203,7 @@ export default function ManageLicense({ embedded }) {
   };
 
   const tabCounts = {
-    pelatih: applications.filter(a => (a.license_type || a.jenis_lisensi) === 'pelatih').length,
+    pelatih: applications.filter(a => (a.license_type || a.jenis_lisensi || '').includes('pelatih')).length,
     juri_muda: applications.filter(a => (a.license_type || a.jenis_lisensi) === 'juri_muda').length,
     juri_madya: applications.filter(a => (a.license_type || a.jenis_lisensi) === 'juri_madya').length,
   };
@@ -539,6 +577,20 @@ export default function ManageLicense({ embedded }) {
                     <p className="text-sm text-red-300 m-0 mt-1">{detail.alasan_penolakan}</p>
                   </div>
                 )}
+                {detail.status === 'issued' && (
+                  <div className="p-3 rounded-xl bg-cyan-500/5 border border-cyan-500/20 space-y-2">
+                    <p className="text-[10px] text-cyan-400 uppercase font-bold m-0 tracking-wider">Informasi Lisensi</p>
+                    {detail.nomor_lisensi && (
+                      <p className="text-sm text-gray-200 m-0">Nomor: <span className="text-cyan-400 font-semibold">{detail.nomor_lisensi}</span></p>
+                    )}
+                    {detail.issued_at && (
+                      <p className="text-sm text-gray-300 m-0">Diterbitkan: {new Date(detail.issued_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
+                    )}
+                    {detail.expires_at && (
+                      <p className="text-sm text-gray-300 m-0">Berlaku s/d: {new Date(detail.expires_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
+                    )}
+                  </div>
+                )}
               </div>
 
               {/* Documents Section */}
@@ -567,15 +619,40 @@ export default function ManageLicense({ embedded }) {
                 </>
               )}
               {detail.status === 'approved' && (
-                <button onClick={() => handleToggleLanding(detail.id)}
-                  className={`inline-flex items-center gap-1.5 px-4 py-2 text-xs rounded-xl font-semibold active:scale-[0.97] transition-all border-none cursor-pointer ${
-                    detail.show_on_landing
-                      ? 'bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 hover:bg-emerald-500/20'
-                      : 'bg-white/[0.05] border border-white/[0.08] text-gray-400 hover:bg-white/[0.08]'
-                  }`} style={{ border: detail.show_on_landing ? '1px solid rgba(16,185,129,0.2)' : '1px solid rgba(255,255,255,0.08)' }}>
-                  <i className={`fas ${detail.show_on_landing ? 'fa-globe' : 'fa-eye-slash'}`} />
-                  {detail.show_on_landing ? 'Tampil di Landing' : 'Tampilkan di Landing'}
-                </button>
+                <>
+                  <button onClick={() => handleIssueLicense(detail.id)}
+                    className="inline-flex items-center gap-1.5 px-4 py-2 text-xs rounded-xl bg-gradient-to-br from-cyan-500 to-blue-600 text-white font-semibold shadow-sm hover:from-cyan-400 hover:to-blue-500 active:scale-[0.97] transition-all border-none cursor-pointer">
+                    <i className="fas fa-certificate" /> Terbitkan Lisensi
+                  </button>
+                  <button onClick={() => handleToggleLanding(detail.id)}
+                    className={`inline-flex items-center gap-1.5 px-4 py-2 text-xs rounded-xl font-semibold active:scale-[0.97] transition-all border-none cursor-pointer ${
+                      detail.show_on_landing
+                        ? 'bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 hover:bg-emerald-500/20'
+                        : 'bg-white/[0.05] border border-white/[0.08] text-gray-400 hover:bg-white/[0.08]'
+                    }`} style={{ border: detail.show_on_landing ? '1px solid rgba(16,185,129,0.2)' : '1px solid rgba(255,255,255,0.08)' }}>
+                    <i className={`fas ${detail.show_on_landing ? 'fa-globe' : 'fa-eye-slash'}`} />
+                    {detail.show_on_landing ? 'Tampil di Landing' : 'Tampilkan di Landing'}
+                  </button>
+                </>
+              )}
+              {detail.status === 'issued' && (
+                <>
+                  <div className="flex items-center gap-2 text-xs text-cyan-400">
+                    <i className="fas fa-certificate" />
+                    <span className="font-semibold">Lisensi Terbit</span>
+                    {detail.nomor_lisensi && <span className="text-gray-400">| {detail.nomor_lisensi}</span>}
+                    {detail.expires_at && <span className="text-gray-400">| s/d {new Date(detail.expires_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}</span>}
+                  </div>
+                  <button onClick={() => handleToggleLanding(detail.id)}
+                    className={`inline-flex items-center gap-1.5 px-4 py-2 text-xs rounded-xl font-semibold active:scale-[0.97] transition-all border-none cursor-pointer ${
+                      detail.show_on_landing
+                        ? 'bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 hover:bg-emerald-500/20'
+                        : 'bg-white/[0.05] border border-white/[0.08] text-gray-400 hover:bg-white/[0.08]'
+                    }`} style={{ border: detail.show_on_landing ? '1px solid rgba(16,185,129,0.2)' : '1px solid rgba(255,255,255,0.08)' }}>
+                    <i className={`fas ${detail.show_on_landing ? 'fa-globe' : 'fa-eye-slash'}`} />
+                    {detail.show_on_landing ? 'Tampil di Landing' : 'Tampilkan di Landing'}
+                  </button>
+                </>
               )}
               <button onClick={() => setDetail(null)}
                 className="inline-flex items-center gap-1.5 px-4 py-2 text-xs rounded-xl bg-white/[0.05] border border-white/[0.08] text-gray-400 font-medium hover:bg-white/[0.08] hover:text-white active:scale-[0.97] transition-all ml-auto cursor-pointer">
@@ -618,6 +695,20 @@ export default function ManageLicense({ embedded }) {
       <div className="space-y-6">
         <ToggleButtons />
         {activeContent}
+
+        <ConfirmModal
+          show={rejectModal.show}
+          title="Tolak Pengajuan"
+          message="Masukkan alasan penolakan pengajuan lisensi ini."
+          confirmText="Tolak"
+          danger
+          showReason
+          reasonLabel="Alasan Penolakan"
+          reason={rejectModal.reason}
+          onReasonChange={v => setRejectModal(p => ({ ...p, reason: v }))}
+          onConfirm={handleRejectConfirm}
+          onCancel={() => setRejectModal({ show: false, id: null, reason: '' })}
+        />
       </div>
     );
   }
@@ -629,6 +720,20 @@ export default function ManageLicense({ embedded }) {
         <ToggleButtons />
         {activeContent}
       </div>
+
+      <ConfirmModal
+        show={rejectModal.show}
+        title="Tolak Pengajuan"
+        message="Masukkan alasan penolakan pengajuan lisensi ini."
+        confirmText="Tolak"
+        danger
+        showReason
+        reasonLabel="Alasan Penolakan"
+        reason={rejectModal.reason}
+        onReasonChange={v => setRejectModal(p => ({ ...p, reason: v }))}
+        onConfirm={handleRejectConfirm}
+        onCancel={() => setRejectModal({ show: false, id: null, reason: '' })}
+      />
     </div>
   );
 }

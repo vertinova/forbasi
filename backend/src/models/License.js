@@ -106,12 +106,13 @@ const LicenseApplication = {
           SUM(CASE WHEN status = 'proses' THEN 1 ELSE 0 END) as proses,
           SUM(CASE WHEN status = 'approved' THEN 1 ELSE 0 END) as approved,
           SUM(CASE WHEN status = 'rejected' THEN 1 ELSE 0 END) as rejected,
-          SUM(CASE WHEN jenis_lisensi = 'pelatih' THEN 1 ELSE 0 END) as pelatih,
+          SUM(CASE WHEN status = 'issued' THEN 1 ELSE 0 END) as issued,
+          SUM(CASE WHEN jenis_lisensi IN ('pelatih', 'pelatih_muda', 'pelatih_madya', 'pelatih_utama') THEN 1 ELSE 0 END) as pelatih,
           SUM(CASE WHEN jenis_lisensi IN ('juri_muda', 'juri_madya') THEN 1 ELSE 0 END) as juri
         FROM license_applications
       `;
       return normBigInt(rows[0]);
-    } catch { return { total: 0, pending: 0, proses: 0, approved: 0, rejected: 0, pelatih: 0, juri: 0 }; }
+    } catch { return { total: 0, pending: 0, proses: 0, approved: 0, rejected: 0, issued: 0, pelatih: 0, juri: 0 }; }
   },
 };
 

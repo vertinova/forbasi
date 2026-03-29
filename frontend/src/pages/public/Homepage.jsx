@@ -196,7 +196,7 @@ export default function Homepage() {
   const memberSlice = filteredClubs.slice((memberPage - 1) * MEMBERS_PER_PAGE, memberPage * MEMBERS_PER_PAGE);
 
   /* helper to get jenis label */
-  const jenisLabel = (j) => j === 'juri_muda' ? 'Juri Muda' : j === 'juri_madya' ? 'Juri Madya' : 'Pelatih';
+  const jenisLabel = (j) => ({ juri_muda: 'Juri Muda', juri_madya: 'Juri Madya', pelatih_muda: 'Pelatih Muda', pelatih_madya: 'Pelatih Madya', pelatih_utama: 'Pelatih Utama', pelatih: 'Pelatih' }[j] || 'Pelatih');
 
   /* ── Drag-to-scroll for gallery row ── */
   const galleryRowRef = useRef(null);

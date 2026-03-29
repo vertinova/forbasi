@@ -7,16 +7,18 @@ import toast from 'react-hot-toast';
 const INPUT = 'w-full px-3.5 py-2.5 text-sm bg-white/[0.05] border border-white/[0.08] text-gray-200 placeholder-gray-500 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500/50 transition-all';
 
 const TABS = [
-  { key: 'pelatih',    label: 'Pelatih',    icon: 'fa-bullhorn', color: 'orange' },
-  { key: 'juri_muda',  label: 'Juri Muda',  icon: 'fa-star',     color: 'violet' },
-  { key: 'juri_madya', label: 'Juri Madya',  icon: 'fa-crown',    color: 'purple' },
+  { key: 'pelatih_muda',  label: 'Pelatih Muda',  icon: 'fa-star',     color: 'orange' },
+  { key: 'pelatih_madya', label: 'Pelatih Madya', icon: 'fa-crown',    color: 'orange' },
+  { key: 'pelatih_utama', label: 'Pelatih Utama', icon: 'fa-trophy',   color: 'orange' },
+  { key: 'juri_muda',     label: 'Juri Muda',     icon: 'fa-star',     color: 'violet' },
+  { key: 'juri_madya',    label: 'Juri Madya',    icon: 'fa-crown',    color: 'purple' },
 ];
 
 const formatCurrency = (v) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(v || 0);
 
 export default function LicenseConfigPage() {
   const [configs, setConfigs] = useState({});
-  const [activeTab, setActiveTab] = useState('pelatih');
+  const [activeTab, setActiveTab] = useState('pelatih_muda');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({
